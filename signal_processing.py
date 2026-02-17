@@ -47,9 +47,8 @@ def madgwick_fusion(
     """
     if Madgwick is None:
         raise ImportError("Install ahrs: pip install ahrs")
-    # Madgwick expects (N,3) and dt = 1/sample_rate
-    dt = 1.0 / sample_rate_hz
-    madgwick = Madgwick(accel=accel, gyr=gyro, frequency=sample_rate_hz, gain=gain)
+    # Madgwick expects (N,3) with params acc= and gyr= (not accel=)
+    madgwick = Madgwick(acc=accel, gyr=gyro, frequency=sample_rate_hz, gain=gain)
     quats = madgwick.Q
     return quats
 
