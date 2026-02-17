@@ -47,9 +47,19 @@ def madgwick_fusion(
     """
     if Madgwick is None:
         raise ImportError("Install ahrs: pip install ahrs")
-    # Madgwick expects (N,3) with params acc= and gyr= (not accel=)
-    madgwick = Madgwick(acc=accel, gyr=gyro, frequency=sample_rate_hz, gain=gain)
-    quats = madgwick.Q
+    n = len(accel)
+    dt = 1.0 / sample_rate_hz
+    # Use step-by-step update so we don't rely on constructor setting .Q (varies by ahrs version)
+    madgwick = Madgwick(frequency=sample_rate_hz, gain=gain)
+    quats = np.zeros((n, 4))
+    # Initial orientation from first accel sample (gravity direction)
+    try:
+        from ahrs.common.orientation import acc2q
+        quats[0] = acc2q(accel[0])
+    except Exception:
+        quats[0] = np.array([1.0, 0.0, 0.0, 0.0])
+    for t in range(1, n):
+        quats[t] = madgwick.updateIMU(quats[t - 1], gyro[t], accel[t], dt=dt)
     return quats
 
 
