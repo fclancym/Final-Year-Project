@@ -6,11 +6,6 @@ Expects accelerometer in m/s² and gyroscope in rad/s (convert in loader if need
 import numpy as np
 from scipy import signal as scipy_signal
 
-try:
-    from ahrs.filters import Madgwick
-except ImportError:
-    Madgwick = None
-
 
 def lowpass_filter(x: np.ndarray, sample_rate_hz: float, cutoff_hz: float, order: int = 4) -> np.ndarray:
     """
@@ -35,6 +30,57 @@ def apply_lowpass_to_imu(
     return accel_f, gyro_f
 
 
+def _accel_to_quat(a: np.ndarray) -> np.ndarray:
+    """Initial quaternion from accelerometer (gravity) direction. Returns [w,x,y,z]."""
+    anorm = np.linalg.norm(a)
+    if anorm < 1e-9:
+        return np.array([1.0, 0.0, 0.0, 0.0])
+    ax, ay, az = a[0] / anorm, a[1] / anorm, a[2] / anorm
+    # Pitch and roll from accel; yaw = 0
+    pitch = np.arcsin(np.clip(-ax, -1, 1))
+    roll = np.arctan2(ay, az)
+    cr, sr = np.cos(roll * 0.5), np.sin(roll * 0.5)
+    cp, sp = np.cos(pitch * 0.5), np.sin(pitch * 0.5)
+    w = cr * cp
+    x = sr * cp
+    y = cr * sp
+    z = -sr * sp
+    return np.array([w, x, y, z]) / np.linalg.norm([w, x, y, z])
+
+
+def _madgwick_imu_step(q: np.ndarray, gyr: np.ndarray, acc: np.ndarray, dt: float, beta: float) -> np.ndarray:
+    """One Madgwick IMU update. q, gyr, acc 1d arrays; returns new quat [w,x,y,z]."""
+    q = q / np.linalg.norm(q)
+    gx, gy, gz = gyr[0], gyr[1], gyr[2]
+    # Quaternion rate from gyro: q_dot = 0.5 * q \otimes [0, gyr]
+    qw, qx, qy, qz = q[0], q[1], q[2], q[3]
+    q_dot_omega = 0.5 * np.array([
+        -qx * gx - qy * gy - qz * gz,
+        qw * gx + qy * gz - qz * gy,
+        qw * gy - qx * gz + qz * gx,
+        qw * gz + qx * qy - qy * gx,
+    ])
+    anorm = np.linalg.norm(acc)
+    if anorm > 1e-9:
+        ax, ay, az = acc[0] / anorm, acc[1] / anorm, acc[2] / anorm
+        f = np.array([
+            2.0 * (qx * qz - qw * qy) - ax,
+            2.0 * (qw * qx + qy * qz) - ay,
+            2.0 * (0.5 - qx ** 2 - qy ** 2) - az,
+        ])
+        J = np.array([
+            [-2 * qy, 2 * qz, -2 * qw, 2 * qx],
+            [2 * qx, 2 * qw, 2 * qz, 2 * qy],
+            [0.0, -4 * qx, -4 * qy, 0.0],
+        ])
+        grad = J.T @ f
+        gnorm = np.linalg.norm(grad)
+        if gnorm > 1e-9:
+            q_dot_omega -= beta * (grad / gnorm)
+    q_new = q + q_dot_omega * dt
+    return q_new / np.linalg.norm(q_new)
+
+
 def madgwick_fusion(
     accel: np.ndarray,
     gyro: np.ndarray,
@@ -43,23 +89,15 @@ def madgwick_fusion(
 ) -> np.ndarray:
     """
     Fuse accel (Nx3 m/s²) and gyro (Nx3 rad/s) with Madgwick filter.
-    Returns quaternions (Nx4) [w, x, y, z].
+    Returns quaternions (Nx4) [w, x, y, z]. Uses a self-contained implementation
+    so behaviour is consistent across environments (no ahrs constructor issues).
     """
-    if Madgwick is None:
-        raise ImportError("Install ahrs: pip install ahrs")
     n = len(accel)
     dt = 1.0 / sample_rate_hz
-    # Use step-by-step update so we don't rely on constructor setting .Q (varies by ahrs version)
-    madgwick = Madgwick(frequency=sample_rate_hz, gain=gain)
     quats = np.zeros((n, 4))
-    # Initial orientation from first accel sample (gravity direction)
-    try:
-        from ahrs.common.orientation import acc2q
-        quats[0] = acc2q(accel[0])
-    except Exception:
-        quats[0] = np.array([1.0, 0.0, 0.0, 0.0])
+    quats[0] = _accel_to_quat(accel[0])
     for t in range(1, n):
-        quats[t] = madgwick.updateIMU(quats[t - 1], gyro[t], accel[t], dt=dt)
+        quats[t] = _madgwick_imu_step(quats[t - 1], gyro[t], accel[t], dt, gain)
     return quats
 
 
