@@ -16,6 +16,19 @@ ML Analytics for Stroke Count, Technique and Fatigue Detection in Swimmers.
 3. Run the cells: install deps, set path, run pipeline on synthetic data, view graphs.
 4. When you have real data, upload your CSV and run the pipeline with `run_pipeline(filepath='...')`.
 
+## Web dashboard
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Opens a local web app at `http://localhost:8501` with:
+- **Synthetic data** by default (or upload your CSV)
+- **Weight input** for accurate power calculation
+- **Black / red / white** theme
+- EO-style charts: Stroke Rate & Power, Entry Angle, SEI
+
 ## Local / command line
 
 ```bash
@@ -39,6 +52,7 @@ python run_pipeline.py --help
 | `synthetic_data.py` | Generate fake accel/gyro for testing without real data. |
 | `ml_analysis.py` | Change-point detection (ruptures) and K-Means fatigue clustering. |
 | `run_pipeline.py` | CLI entry point. |
+| `app.py` | Streamlit web dashboard. |
 | `FYP_Swimming_IMU_Pipeline.ipynb` | Colab notebook. |
 
 ## CSV format
