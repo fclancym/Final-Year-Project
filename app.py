@@ -436,7 +436,20 @@ def main():
 
     st.markdown("---")
 
-    # Tabs for each metric
+    # Session values from data (used inside each tab)
+    avg_spm = float(df["spm"].mean())
+    avg_power = float(df["power_w"].mean())
+    avg_reach = float(df["reach_m"].mean())
+    avg_entry_deg = float(df["entry_angle_deg"].mean())
+    sei_vals = df["sei"].replace([np.inf, -np.inf], np.nan)
+    avg_sei = float(sei_vals.mean()) if sei_vals.notna().any() else None
+    if avg_entry_deg >= -10 and avg_entry_deg <= 10:
+        entry_label = "Good"
+    elif avg_entry_deg < -10:
+        entry_label = "Bad (injury risk)"
+    else:
+        entry_label = "Bad (inefficient)"
+
     tab_overview, tab_spm, tab_power, tab_reach, tab_angle, tab_sei, tab_fatigue = st.tabs([
         "Overview",
         "Stroke Rate (SPM)",
@@ -453,6 +466,7 @@ def main():
             st.dataframe(df, use_container_width=True)
 
     with tab_spm:
+        st.markdown(f"**Session value:** {avg_spm:.1f} strokes per minute (average)")
         st.plotly_chart(plot_stroke_rate(df, dark_mode), use_container_width=True)
         st.markdown("---")
         render_metric_info(
@@ -464,6 +478,7 @@ def main():
         )
 
     with tab_power:
+        st.markdown(f"**Session value:** {avg_power:.1f} W average power per stroke")
         st.plotly_chart(plot_power(df, dark_mode), use_container_width=True)
         st.markdown("---")
         render_metric_info(
@@ -475,6 +490,7 @@ def main():
         )
 
     with tab_reach:
+        st.markdown(f"**Session value:** {avg_reach:.2f} m average stroke reach")
         st.plotly_chart(plot_reach(df, dark_mode), use_container_width=True)
         st.markdown("---")
         render_metric_info(
@@ -486,6 +502,7 @@ def main():
         )
 
     with tab_angle:
+        st.markdown(f"**Session value:** {avg_entry_deg:.1f}° average hand entry angle — **{entry_label}**")
         st.plotly_chart(plot_entry_angle(df, dark_mode), use_container_width=True)
         st.markdown("---")
         render_metric_info(
@@ -499,6 +516,8 @@ def main():
     with tab_sei:
         sei_clean = df["sei"].replace([np.inf, -np.inf], np.nan)
         change_points = detect_sei_change_points(sei_clean.values) if len(df) > 4 else []
+        if avg_sei is not None and not np.isnan(avg_sei):
+            st.markdown(f"**Session value:** {avg_sei:.4f} average Stroke Efficiency Index")
         st.plotly_chart(plot_sei(df, dark_mode, change_points), use_container_width=True)
         if change_points:
             st.info(f"**Change points detected** at strokes: {change_points}. Efficiency may have shifted at these points.")
