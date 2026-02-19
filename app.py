@@ -13,6 +13,7 @@ from plotly.subplots import make_subplots
 import config
 from synthetic_data import generate_synthetic_imu
 from pipeline import run_pipeline
+from ml_analysis import detect_sei_change_points, fatigue_clustering
 
 # Page config
 st.set_page_config(
@@ -22,30 +23,40 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for black/red/white theme
-st.markdown("""
-<style>
-    /* Main background */
-    .stApp { background-color: #0a0a0a; }
-    
-    /* Sidebar */
-    [data-testid="stSidebar"] { background-color: #111111; }
-    
-    /* Headers */
-    h1, h2, h3 { color: #ffffff !important; }
-    p, label, span { color: #e0e0e0 !important; }
-    
-    /* Metric cards */
-    [data-testid="stMetricValue"] { color: #ff3333 !important; font-weight: bold; }
-    [data-testid="stMetricLabel"] { color: #aaaaaa !important; }
-    
-    /* Input focus */
-    .stSlider > div > div > div { background: #ff3333 !important; }
-    
-    /* Expander */
-    .streamlit-expanderHeader { background-color: #1a1a1a !important; color: #fff !important; }
-</style>
-""", unsafe_allow_html=True)
+# Dark mode toggle (persists in session)
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
+
+def get_theme_css(dark_mode):
+    """Return CSS for light or dark theme."""
+    if dark_mode:
+        return """
+        <style>
+            .stApp { background-color: #0a0a0a; }
+            [data-testid="stSidebar"] { background-color: #111111; }
+            h1, h2, h3 { color: #ffffff !important; }
+            p, label, span { color: #e0e0e0 !important; }
+            [data-testid="stMetricValue"] { color: #ff3333 !important; font-weight: bold; }
+            [data-testid="stMetricLabel"] { color: #aaaaaa !important; }
+            .streamlit-expanderHeader { background-color: #1a1a1a !important; color: #fff !important; }
+        </style>
+        """
+    return """
+    <style>
+        [data-testid="stMetricValue"] { color: #cc0000 !important; font-weight: bold; }
+    </style>
+    """
+
+
+def render_metric_info(ml_goal, technique, libraries, input_features, output_result):
+    """Render a simplified info table for a metric/ML technique."""
+    st.markdown("#### Methodology")
+    st.markdown(f"**ML Goal:** {ml_goal}")
+    st.markdown(f"**Technique:** {technique}")
+    st.markdown(f"**Libraries:** {libraries}")
+    st.markdown(f"**Input Features (per stroke):** {input_features}")
+    st.markdown(f"**Output Result:** {output_result}")
 
 
 def load_data():
@@ -108,7 +119,88 @@ def run_analysis(data, mass_kg):
     return result
 
 
-def plot_stroke_rate_power(df):
+def plot_stroke_rate(df, dark_mode=False):
+    """Stroke rate (SPM) over strokes."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=df["stroke_index"],
+            y=df["spm"],
+            mode="lines+markers",
+            line=dict(color="#00cc66", width=2),
+            marker=dict(size=5),
+            name="Stroke Rate (st/min)",
+        )
+    )
+    if dark_mode:
+        fig.update_layout(
+            title="Strokes Per Minute",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(20,20,20,0.8)",
+            font=dict(color="#ffffff"),
+            xaxis=dict(title="Stroke", gridcolor="#333333"),
+            yaxis=dict(title="SPM (st/min)", gridcolor="#333333"),
+            showlegend=False,
+        )
+        fig.update_yaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+        fig.update_xaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+    else:
+        fig.update_layout(
+            title="Strokes Per Minute",
+            template="plotly_white",
+            paper_bgcolor="rgba(255,255,255,0)",
+            plot_bgcolor="rgba(250,250,250,0.9)",
+            font=dict(color="#1a1a1a"),
+            xaxis=dict(title="Stroke", gridcolor="#dddddd"),
+            yaxis=dict(title="SPM (st/min)", gridcolor="#dddddd"),
+            showlegend=False,
+        )
+    return fig
+
+
+def plot_power(df, dark_mode=False):
+    """Power per stroke."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=df["stroke_index"],
+            y=df["power_w"],
+            name="Power (W)",
+            marker_color="#cc0000",
+            opacity=0.7,
+        )
+    )
+    if dark_mode:
+        fig.update_layout(
+            title="Power per Stroke",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(20,20,20,0.8)",
+            font=dict(color="#ffffff"),
+            xaxis=dict(title="Stroke", gridcolor="#333333"),
+            yaxis=dict(title="Power (W)", gridcolor="#333333"),
+            showlegend=False,
+            bargap=0.2,
+        )
+        fig.update_yaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+        fig.update_xaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+    else:
+        fig.update_layout(
+            title="Power per Stroke",
+            template="plotly_white",
+            paper_bgcolor="rgba(255,255,255,0)",
+            plot_bgcolor="rgba(250,250,250,0.9)",
+            font=dict(color="#1a1a1a"),
+            xaxis=dict(title="Stroke", gridcolor="#dddddd"),
+            yaxis=dict(title="Power (W)", gridcolor="#dddddd"),
+            showlegend=False,
+            bargap=0.2,
+        )
+    return fig
+
+
+def plot_stroke_rate_power(df, dark_mode=False):
     """EO-style stacked bar + stroke rate line chart."""
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     # Power bars (single hand for now)
@@ -134,24 +226,38 @@ def plot_stroke_rate_power(df):
         ),
         secondary_y=True,
     )
-    fig.update_layout(
+    layout_kw = dict(
         title="Stroke Rate & Power",
-        template="plotly_dark",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(20,20,20,0.8)",
-        font=dict(color="#ffffff"),
-        xaxis=dict(title="Stroke", gridcolor="#333333"),
-        yaxis=dict(title="Power (W)", gridcolor="#333333"),
-        yaxis2=dict(title="Stroke Rate (st/min)", gridcolor="#333333"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         bargap=0.2,
     )
-    fig.update_yaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
-    fig.update_xaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+    if dark_mode:
+        layout_kw.update(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(20,20,20,0.8)",
+            font=dict(color="#ffffff"),
+            xaxis=dict(title="Stroke", gridcolor="#333333"),
+            yaxis=dict(title="Power (W)", gridcolor="#333333"),
+            yaxis2=dict(title="Stroke Rate (st/min)", gridcolor="#333333"),
+        )
+        fig.update_yaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+        fig.update_xaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+    else:
+        layout_kw.update(
+            template="plotly_white",
+            paper_bgcolor="rgba(255,255,255,0)",
+            plot_bgcolor="rgba(250,250,250,0.9)",
+            font=dict(color="#1a1a1a"),
+            xaxis=dict(title="Stroke", gridcolor="#dddddd"),
+            yaxis=dict(title="Power (W)", gridcolor="#dddddd"),
+            yaxis2=dict(title="Stroke Rate (st/min)", gridcolor="#dddddd"),
+        )
+    fig.update_layout(**layout_kw)
     return fig
 
 
-def plot_entry_angle(df):
+def plot_entry_angle(df, dark_mode=False):
     """Hand entry angle over strokes."""
     fig = go.Figure()
     fig.add_trace(
@@ -165,23 +271,75 @@ def plot_entry_angle(df):
         )
     )
     fig.add_hline(y=0, line_dash="dash", line_color="#666666", opacity=0.5)
-    fig.update_layout(
-        title="Hand Entry Angle",
-        template="plotly_dark",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(20,20,20,0.8)",
-        font=dict(color="#ffffff"),
-        xaxis=dict(title="Stroke", gridcolor="#333333"),
-        yaxis=dict(title="Angle (°)", gridcolor="#333333"),
-        showlegend=False,
-    )
-    fig.update_yaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
-    fig.update_xaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+    if dark_mode:
+        fig.update_layout(
+            title="Hand Entry Angle",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(20,20,20,0.8)",
+            font=dict(color="#ffffff"),
+            xaxis=dict(title="Stroke", gridcolor="#333333"),
+            yaxis=dict(title="Angle (°)", gridcolor="#333333"),
+            showlegend=False,
+        )
+        fig.update_yaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+        fig.update_xaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+    else:
+        fig.update_layout(
+            title="Hand Entry Angle",
+            template="plotly_white",
+            paper_bgcolor="rgba(255,255,255,0)",
+            plot_bgcolor="rgba(250,250,250,0.9)",
+            font=dict(color="#1a1a1a"),
+            xaxis=dict(title="Stroke", gridcolor="#dddddd"),
+            yaxis=dict(title="Angle (°)", gridcolor="#dddddd"),
+            showlegend=False,
+        )
     return fig
 
 
-def plot_sei(df):
-    """Stroke Efficiency Index over time."""
+def plot_reach(df, dark_mode=False):
+    """Stroke reach over strokes."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=df["stroke_index"],
+            y=df["reach_m"],
+            mode="lines+markers",
+            line=dict(color="#3366cc", width=2),
+            marker=dict(size=4),
+            name="Reach (m)",
+        )
+    )
+    if dark_mode:
+        fig.update_layout(
+            title="Stroke Reach",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(20,20,20,0.8)",
+            font=dict(color="#ffffff"),
+            xaxis=dict(title="Stroke", gridcolor="#333333"),
+            yaxis=dict(title="Reach (m)", gridcolor="#333333"),
+            showlegend=False,
+        )
+        fig.update_yaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+        fig.update_xaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+    else:
+        fig.update_layout(
+            title="Stroke Reach",
+            template="plotly_white",
+            paper_bgcolor="rgba(255,255,255,0)",
+            plot_bgcolor="rgba(250,250,250,0.9)",
+            font=dict(color="#1a1a1a"),
+            xaxis=dict(title="Stroke", gridcolor="#dddddd"),
+            yaxis=dict(title="Reach (m)", gridcolor="#dddddd"),
+            showlegend=False,
+        )
+    return fig
+
+
+def plot_sei(df, dark_mode=False, change_points=None):
+    """Stroke Efficiency Index over time, optionally with change points."""
     sei = df["sei"].replace([np.inf, -np.inf], np.nan)
     fig = go.Figure()
     fig.add_trace(
@@ -194,22 +352,47 @@ def plot_sei(df):
             name="SEI",
         )
     )
-    fig.update_layout(
-        title="Stroke Efficiency Index (Reach / Power)",
-        template="plotly_dark",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(20,20,20,0.8)",
-        font=dict(color="#ffffff"),
-        xaxis=dict(title="Stroke", gridcolor="#333333"),
-        yaxis=dict(title="SEI", gridcolor="#333333"),
-        showlegend=False,
-    )
-    fig.update_yaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
-    fig.update_xaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+    if change_points:
+        for cp in change_points:
+            if 0 <= cp < len(df):
+                fig.add_vline(x=cp, line_dash="dash", line_color="#ff3333", opacity=0.7)
+    if dark_mode:
+        fig.update_layout(
+            title="Stroke Efficiency Index (Reach / Power)",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(20,20,20,0.8)",
+            font=dict(color="#ffffff"),
+            xaxis=dict(title="Stroke", gridcolor="#333333"),
+            yaxis=dict(title="SEI", gridcolor="#333333"),
+            showlegend=False,
+        )
+        fig.update_yaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+        fig.update_xaxes(title_font=dict(color="#cccccc"), tickfont=dict(color="#aaaaaa"))
+    else:
+        fig.update_layout(
+            title="Stroke Efficiency Index (Reach / Power)",
+            template="plotly_white",
+            paper_bgcolor="rgba(255,255,255,0)",
+            plot_bgcolor="rgba(250,250,250,0.9)",
+            font=dict(color="#1a1a1a"),
+            xaxis=dict(title="Stroke", gridcolor="#dddddd"),
+            yaxis=dict(title="SEI", gridcolor="#dddddd"),
+            showlegend=False,
+        )
     return fig
 
 
 def main():
+    # Dark mode toggle - top left corner
+    top_left, _ = st.columns([1, 8])
+    with top_left:
+        dark_mode = st.toggle("🌙 Dark mode", value=st.session_state.dark_mode, key="dark_toggle")
+        st.session_state.dark_mode = dark_mode
+
+    # Apply theme CSS
+    st.markdown(get_theme_css(dark_mode), unsafe_allow_html=True)
+
     st.title("🏊 Swimming IMU Analytics")
     st.markdown("Stroke count, power, reach, entry angle & efficiency — from your IMU data.")
 
@@ -235,7 +418,7 @@ def main():
     duration_s = df_raw["time_s"].iloc[-1] - df_raw["time_s"].iloc[0]
     duration_str = f"{int(duration_s // 60):02d}:{int(duration_s % 60):02d}"
 
-    # KPI row
+    # KPI row (always visible)
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col1:
         st.metric("Strokes", len(df))
@@ -253,19 +436,116 @@ def main():
 
     st.markdown("---")
 
-    # Main chart: Stroke Rate & Power
-    st.plotly_chart(plot_stroke_rate_power(df), use_container_width=True)
+    # Tabs for each metric
+    tab_overview, tab_spm, tab_power, tab_reach, tab_angle, tab_sei, tab_fatigue = st.tabs([
+        "Overview",
+        "Stroke Rate (SPM)",
+        "Power",
+        "Stroke Reach",
+        "Hand Entry Angle",
+        "Stroke Efficiency (SEI)",
+        "Fatigue Detection",
+    ])
 
-    # Second row: Entry angle + SEI
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.plotly_chart(plot_entry_angle(df), use_container_width=True)
-    with col_b:
-        st.plotly_chart(plot_sei(df), use_container_width=True)
+    with tab_overview:
+        st.plotly_chart(plot_stroke_rate_power(df, dark_mode), use_container_width=True)
+        with st.expander("View per-stroke data"):
+            st.dataframe(df, use_container_width=True)
 
-    # Expandable: raw data table
-    with st.expander("View per-stroke data"):
-        st.dataframe(df, use_container_width=True)
+    with tab_spm:
+        st.plotly_chart(plot_stroke_rate(df, dark_mode), use_container_width=True)
+        st.markdown("---")
+        render_metric_info(
+            ml_goal="Track pacing and consistency; early marker of fatigue (SPM may increase as efficiency drops).",
+            technique="Peak detection on Z-axis acceleration",
+            libraries="scipy.signal.find_peaks",
+            input_features="Filtered accelerometer Z-axis",
+            output_result="Stroke count and stroke rate (SPM) per stroke.",
+        )
+
+    with tab_power:
+        st.plotly_chart(plot_power(df, dark_mode), use_container_width=True)
+        st.markdown("---")
+        render_metric_info(
+            ml_goal="Measure mechanical output per stroke.",
+            technique="Physics model: P = (m × a) × reach × stroke rate",
+            libraries="NumPy, pandas",
+            input_features="Mass (kg), peak acceleration (m/s²), reach (m), stroke rate (1/s)",
+            output_result="Power in Watts per stroke.",
+        )
+
+    with tab_reach:
+        st.plotly_chart(plot_reach(df, dark_mode), use_container_width=True)
+        st.markdown("---")
+        render_metric_info(
+            ml_goal="Measure effective distance per stroke; direct indicator of efficiency.",
+            technique="Double integration of acceleration with ZUPT (or fixed arm length fallback)",
+            libraries="NumPy, scipy",
+            input_features="Z-axis acceleration (fused with gyro orientation)",
+            output_result="Stroke reach in metres per stroke.",
+        )
+
+    with tab_angle:
+        st.plotly_chart(plot_entry_angle(df, dark_mode), use_container_width=True)
+        st.markdown("---")
+        render_metric_info(
+            ml_goal="Classify entry as Good (flat), Bad (injury risk), or Inefficient.",
+            technique="Pitch/Roll from sensor fusion at water entry; future: ML classifier",
+            libraries="ahrs / custom Madgwick, scikit-learn (planned)",
+            input_features="Pitch and roll (degrees) at stroke entry timestamp",
+            output_result="Entry angle per stroke; future: Good / Bad / Inefficient labels.",
+        )
+
+    with tab_sei:
+        sei_clean = df["sei"].replace([np.inf, -np.inf], np.nan)
+        change_points = detect_sei_change_points(sei_clean.values) if len(df) > 4 else []
+        st.plotly_chart(plot_sei(df, dark_mode, change_points), use_container_width=True)
+        if change_points:
+            st.info(f"**Change points detected** at strokes: {change_points}. Efficiency may have shifted at these points.")
+        st.markdown("---")
+        render_metric_info(
+            ml_goal="Pinpoint where efficiency statistically drops during the swim.",
+            technique="Change Point Detection",
+            libraries="ruptures",
+            input_features="Time-series of Stroke Efficiency Index (SEI = Reach / Power)",
+            output_result="Stroke numbers where SEI mean/variance shifts; targeted feedback (e.g. 'Performance declined after stroke 75').",
+        )
+
+    with tab_fatigue:
+        try:
+            labels, _ = fatigue_clustering(df, n_clusters=3)
+            df_fatigue = df.copy()
+            df_fatigue["Cluster"] = labels
+            cluster_names = {0: "Fresh", 1: "Steady", 2: "Fatigued"}
+            df_fatigue["Phase"] = df_fatigue["Cluster"].map(cluster_names)
+            fig_fatigue = px.scatter(
+                df_fatigue, x="stroke_index", y="power_w",
+                color="Phase", color_discrete_map={"Fresh": "#00cc66", "Steady": "#ffaa00", "Fatigued": "#cc0000"},
+            )
+            fig_fatigue.update_layout(
+                title="Fatigue Clustering (Power vs Stroke)",
+                xaxis_title="Stroke",
+                yaxis_title="Power (W)",
+            )
+            if dark_mode:
+                fig_fatigue.update_layout(
+                    template="plotly_dark",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(20,20,20,0.8)",
+                    font=dict(color="#ffffff"),
+                )
+            st.plotly_chart(fig_fatigue, use_container_width=True)
+            st.caption("Strokes grouped into Fresh / Steady / Fatigued based on Power, SPM, Reach, and Entry Angle.")
+        except Exception as e:
+            st.warning(f"Clustering could not run: {e}")
+        st.markdown("---")
+        render_metric_info(
+            ml_goal="Detect fatigue signatures without manual labelling.",
+            technique="K-Means Clustering",
+            libraries="sklearn.cluster",
+            input_features="Normalized: Power (P), Stroke Rate (SR), Reach (D), Entry Angle (A)",
+            output_result="Strokes grouped into clusters (e.g. Fresh, Steady-State, Fatigued) based on performance characteristics.",
+        )
 
     # Footer
     st.sidebar.markdown("---")
