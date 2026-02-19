@@ -50,6 +50,9 @@ def _accel_to_quat(a: np.ndarray) -> np.ndarray:
 
 def _madgwick_imu_step(q: np.ndarray, gyr: np.ndarray, acc: np.ndarray, dt: float, beta: float) -> np.ndarray:
     """One Madgwick IMU update. q, gyr, acc 1d arrays; returns new quat [w,x,y,z]."""
+    q = np.asarray(q, dtype=float).ravel()
+    if q.shape[0] != 4:
+        raise ValueError("q must be length 4")
     q = q / np.linalg.norm(q)
     gx, gy, gz = gyr[0], gyr[1], gyr[2]
     # Quaternion rate from gyro: q_dot = 0.5 * q \otimes [0, gyr]
