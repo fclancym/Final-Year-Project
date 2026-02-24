@@ -6,8 +6,10 @@ Runs pipeline (synthetic or CSV), then serves Coach Overview, Deep-Dive, and Com
 import matplotlib
 matplotlib.use("Agg")
 
+import json
 import os
 import uuid
+from datetime import datetime
 import numpy as np
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import config
@@ -20,10 +22,41 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-in-produc
 
 # Directory for uploaded CSV files (created on first use)
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+ATHLETES_FILE = os.path.join(DATA_DIR, "saved_athletes.json")
+
+LEVELS = [
+    ("novice", "Novice"),
+    ("high_performance", "High Performance"),
+    ("elite", "Elite"),
+]
 
 
 def _ensure_upload_dir():
     os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+def _ensure_data_dir():
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+
+def load_saved_athletes():
+    """Load list of saved athletes from JSON. Each item: id, name, level, created_at, data."""
+    if not os.path.isfile(ATHLETES_FILE):
+        return []
+    try:
+        with open(ATHLETES_FILE, "r") as f:
+            out = json.load(f)
+        return out.get("athletes", [])
+    except Exception:
+        return []
+
+
+def save_saved_athletes(athletes):
+    """Persist list of saved athletes to JSON."""
+    _ensure_data_dir()
+    with open(ATHLETES_FILE, "w") as f:
+        json.dump({"athletes": athletes}, f, indent=2)
 
 
 def get_session_data(filepath=None, mass_kg=70, duration_sec=90, stroke_rate_spm=52):
@@ -247,7 +280,10 @@ def _get_data_or_redirect():
         mass_kg = request.args.get("mass", 70, type=int)
     try:
         data = get_session_data(filepath=filepath, mass_kg=mass_kg)
-        return (data or {}, None)
+        data = data or {}
+        data["swimmer_name"] = session.get("swimmer_name", "")
+        data["swimmer_level"] = session.get("swimmer_level", "")
+        return (data, None)
     except Exception as e:
         if filepath:
             session.pop("uploaded_file", None)
@@ -288,7 +324,20 @@ def comparison():
     if err:
         flash(err, "error")
         return redirect(url_for("data_upload"))
-    return render_template("comparison.html", data=data)
+    source_a = request.args.get("a", "current")
+    source_b = request.args.get("b", "current")
+    comparison_data = _build_comparison_from_two_sources(source_a, source_b, data)
+    if comparison_data is None and (source_a != "current" or source_b != "current"):
+        comparison_data = _build_comparison_from_two_sources("current", "current", data)
+    saved = load_saved_athletes()
+    return render_template(
+        "comparison.html",
+        data=comparison_data or data,
+        saved_athletes=saved,
+        levels=LEVELS,
+        source_a=source_a,
+        source_b=source_b,
+    )
 
 
 @app.route("/data-upload", methods=["GET", "POST"])
@@ -304,6 +353,8 @@ def data_upload():
 
         if use_synthetic:
             session.pop("uploaded_file", None)
+            session.pop("swimmer_name", None)
+            session.pop("swimmer_level", None)
             session["mass_kg"] = mass_kg
             flash("Using synthetic data. View dashboard with your chosen mass.", "success")
             return redirect(url_for("coach_overview"))
@@ -345,20 +396,116 @@ def data_upload():
 
         session["uploaded_file"] = save_path
         session["mass_kg"] = mass_kg
+        session["swimmer_name"] = (request.form.get("swimmer_name") or "").strip() or None
+        level = (request.form.get("swimmer_level") or "").strip()
+        if level in ("novice", "high_performance", "elite"):
+            session["swimmer_level"] = level
+        else:
+            session["swimmer_level"] = "novice"
         flash(f"File uploaded successfully. {data['stroke_count']} strokes detected.", "success")
         return redirect(url_for("coach_overview"))
 
     # GET: show upload form
     has_upload = bool(session.get("uploaded_file"))
-    return render_template("data_upload.html", has_upload=has_upload)
+    saved = load_saved_athletes()
+    return render_template("data_upload.html", has_upload=has_upload, saved_athletes=saved, levels=LEVELS)
 
 
 @app.route("/data-upload/clear")
 def data_upload_clear():
     session.pop("uploaded_file", None)
     session.pop("mass_kg", None)
+    session.pop("swimmer_name", None)
+    session.pop("swimmer_level", None)
     flash("Cleared uploaded file. Using synthetic data until you upload again.", "success")
     return redirect(url_for("data_upload"))
+
+
+@app.route("/save-athlete", methods=["POST"])
+def save_athlete():
+    """Save current session (name, level, metrics) to stored list for later comparison."""
+    data, err = _get_data_or_redirect()
+    if err:
+        flash(err, "error")
+        return redirect(url_for("data_upload"))
+    name = (session.get("swimmer_name") or request.form.get("swimmer_name") or "").strip() or "Unnamed"
+    level = session.get("swimmer_level") or request.form.get("swimmer_level") or "novice"
+    if level not in ("novice", "high_performance", "elite"):
+        level = "novice"
+    athletes = load_saved_athletes()
+    athletes.append({
+        "id": uuid.uuid4().hex,
+        "name": name,
+        "level": level,
+        "created_at": datetime.utcnow().isoformat() + "Z",
+        "data": data,
+    })
+    save_saved_athletes(athletes)
+    flash(f"Saved “{name}” ({dict(LEVELS).get(level, level)}). You can compare them on the Comparison page.", "success")
+    return redirect(url_for("coach_overview"))
+
+
+def _build_comparison_from_two_sources(source_a, source_b, current_data):
+    """Build comparison data dict for template from two sources. Source is 'current' or saved athlete id."""
+    def metrics_from_data(d):
+        return {
+            "avg_power": d.get("avg_power", 0),
+            "reach_cm": d.get("avg_reach_cm", 0),
+            "entry_angle": d.get("avg_entry_angle", 0),
+            "name": d.get("swimmer_name") or "Session",
+            "level": d.get("swimmer_level") or "—",
+        }
+    if source_a == "current" and source_b == "current" and current_data:
+        # First half vs second half of current session
+        mid = (current_data.get("stroke_count") or 0) // 2
+        return {
+            **current_data,
+            "session_a": {
+                "name": (current_data.get("swimmer_name") or "Current") + " (first half)",
+                "level": current_data.get("swimmer_level", "—"),
+                "avg_power": current_data.get("session_a", {}).get("avg_power", 0),
+                "reach_cm": current_data.get("session_a", {}).get("reach_cm", 0),
+                "entry_angle": current_data.get("session_a", {}).get("entry_angle", 0),
+            },
+            "session_b": {
+                "name": (current_data.get("swimmer_name") or "Current") + " (second half)",
+                "level": current_data.get("swimmer_level", "—"),
+                "avg_power": current_data.get("session_b", {}).get("avg_power", 0),
+                "reach_cm": current_data.get("session_b", {}).get("reach_cm", 0),
+                "entry_angle": current_data.get("session_b", {}).get("entry_angle", 0),
+            },
+            "delta_power_pct": current_data.get("delta_power_pct", 0),
+            "delta_reach_cm": current_data.get("delta_reach_cm", 0),
+            "delta_angle": current_data.get("delta_angle", 0),
+            "stroke_count": current_data.get("stroke_count"),
+            "duration_str": current_data.get("duration_str"),
+            "duration_s": current_data.get("duration_s"),
+        }
+    athletes = {a["id"]: a for a in load_saved_athletes()}
+    a_data = current_data if source_a == "current" else athletes.get(source_a, {}).get("data", {})
+    b_data = current_data if source_b == "current" else athletes.get(source_b, {}).get("data", {})
+    if not a_data or not b_data:
+        return None
+    sa = metrics_from_data(a_data)
+    sb = metrics_from_data(b_data)
+    if source_a != "current":
+        sa["name"] = athletes.get(source_a, {}).get("name", "Saved")
+        sa["level"] = dict(LEVELS).get(athletes.get(source_a, {}).get("level", ""), "—")
+    if source_b != "current":
+        sb["name"] = athletes.get(source_b, {}).get("name", "Saved")
+        sb["level"] = dict(LEVELS).get(athletes.get(source_b, {}).get("level", ""), "—")
+    pa, pb = sa["avg_power"], sb["avg_power"]
+    delta_power = round((pb - pa) / pa * 100, 1) if pa else 0
+    return {
+        "session_a": sa,
+        "session_b": sb,
+        "delta_power_pct": delta_power,
+        "delta_reach_cm": int(sb["reach_cm"] - sa["reach_cm"]),
+        "delta_angle": round(sb["entry_angle"] - sa["entry_angle"], 1),
+        "stroke_count": a_data.get("stroke_count") or b_data.get("stroke_count"),
+        "duration_str": a_data.get("duration_str") or b_data.get("duration_str", "00:00"),
+        "duration_s": a_data.get("duration_s") or b_data.get("duration_s"),
+    }
 
 
 if __name__ == "__main__":

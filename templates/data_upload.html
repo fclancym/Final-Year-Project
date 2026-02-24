@@ -60,7 +60,23 @@
         {% if has_upload %}
         <div class="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20">
             <p class="text-sm font-medium text-primary">A CSV file is currently loaded. All dashboard pages use this file.</p>
+            <form action="{{ url_for('save_athlete') }}" method="post" class="mt-3 flex flex-wrap items-center gap-3">
+                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90">Save this athlete to list</button>
+                <span class="text-xs text-slate-500">Save name, level and metrics so you can compare them later on the Comparison page.</span>
+            </form>
             <a href="/data-upload/clear" class="inline-block mt-2 text-sm font-bold text-slate-500 hover:text-rose-500">Clear and use synthetic data</a>
+        </div>
+        {% endif %}
+
+        {% if saved_athletes %}
+        <div class="mb-6 p-4 rounded-xl border border-slate-200 dark:border-primary/20 bg-white dark:bg-slate-900/40">
+            <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Saved athletes (for comparison)</h3>
+            <p class="text-xs text-slate-500 mb-3">Go to <a href="/comparison" class="text-primary font-medium">Comparison</a> and pick two to compare.</p>
+            <ul class="space-y-1 text-sm">
+                {% for ath in saved_athletes %}
+                <li class="flex items-center gap-2"><span class="font-medium">{{ ath.name }}</span><span class="text-slate-500">({{ 'Elite' if ath.level == 'elite' else ('High Performance' if ath.level == 'high_performance' else 'Novice') }})</span><span class="text-xs text-slate-400">— {{ ath.data.stroke_count }} strokes</span></li>
+                {% endfor %}
+            </ul>
         </div>
         {% endif %}
 
@@ -69,6 +85,21 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">Upload a CSV export from your Shimmer (or compatible) IMU. Expected columns: <strong>Timestamp</strong>, <strong>Accelerometer X/Y/Z</strong>, <strong>Gyroscope X/Y/Y</strong>. Acceleration in m/s² or g; time in seconds or ms.</p>
 
             <form action="{{ url_for('data_upload') }}" method="post" enctype="multipart/form-data" class="space-y-6">
+                <p class="text-xs text-slate-500">Optional: add a name and level so you can tell swimmers apart and compare them later.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2">Swimmer name</label>
+                        <input type="text" name="swimmer_name" placeholder="e.g. Alex Murphy" class="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"/>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2">Level</label>
+                        <select name="swimmer_level" class="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                            {% for value, label in levels %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2">Swimmer mass (kg)</label>
                     <input type="number" name="mass_kg" value="70" min="30" max="150" step="1" class="w-32 rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"/>

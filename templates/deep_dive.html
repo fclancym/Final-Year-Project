@@ -43,14 +43,16 @@
                     <div class="h-16 w-16 rounded-full bg-primary/20 ring-4 ring-primary/20"></div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-2xl font-bold">Current Session</h2>
-                            <span class="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Elite</span>
+                            <h2 class="text-2xl font-bold">{{ d.get('swimmer_name') or 'Current Session' }}</h2>
+                            {% set level_label = 'Elite' if d.get('swimmer_level') == 'elite' else ('High Performance' if d.get('swimmer_level') == 'high_performance' else ('Novice' if d.get('swimmer_level') == 'novice' else 'Elite')) %}
+                            <span class="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">{{ level_label if d.get('swimmer_level') else 'Session' }}</span>
                         </div>
-                        <p class="text-slate-500 text-sm font-medium italic">Synthetic IMU • Pipeline • {{ d.get('duration_str', '01:30.00') }}</p>
+                        <p class="text-slate-500 text-sm font-medium italic">{% if d.get('swimmer_name') %}Saved athlete • {% endif %}{{ d.get('duration_str', '01:30.00') }} • {{ d.get('stroke_count', 0) }} strokes</p>
                     </div>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <a href="/comparison" class="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm font-bold border border-slate-200 dark:border-slate-700"><span class="material-symbols-outlined text-sm">compare_arrows</span>Compare Sessions</a>
+                    <form action="{{ url_for('save_athlete') }}" method="post" class="inline"><button type="submit" class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700">Save to list</button></form>
                     <button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-lg shadow-primary/20"><span class="material-symbols-outlined text-sm">edit_note</span>Add Coach Note</button>
                 </div>
             </div>

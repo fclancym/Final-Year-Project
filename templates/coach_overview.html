@@ -118,8 +118,8 @@
                                     <div class="relative"><div class="w-10 h-10 rounded-full bg-primary/20 border border-primary/20"></div>
                                     <span class="absolute bottom-0 right-0 w-3 h-3 {{ 'bg-emerald-500' if (d.get('pct_fresh', 72) >= 60) else 'bg-amber-500' if (d.get('pct_fresh', 72) >= 40) else 'bg-rose-500' }} border-2 border-white dark:border-background-dark rounded-full"></span></div>
                                     <div>
-                                        <p class="text-sm font-bold">Current Session</p>
-                                        <span class="px-2 py-0.5 rounded-full {{ 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' if (d.get('pct_fresh', 72) >= 60) else 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' if (d.get('pct_fresh', 72) >= 40) else 'bg-rose-100 dark:bg-rose-900/30 text-rose-600' }} text-[10px] font-bold uppercase">{{ 'Fresh' if (d.get('pct_fresh', 72) >= 60) else 'Fatigued' if (d.get('pct_fresh', 72) < 40) else 'Technical Breakdown' }}</span>
+                                        <p class="text-sm font-bold">{{ d.get('swimmer_name') or 'Current Session' }}</p>
+                                        <span class="px-2 py-0.5 rounded-full {{ 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' if (d.get('pct_fresh', 72) >= 60) else 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' if (d.get('pct_fresh', 72) >= 40) else 'bg-rose-100 dark:bg-rose-900/30 text-rose-600' }} text-[10px] font-bold uppercase">{{ 'Fresh' if (d.get('pct_fresh', 72) >= 60) else 'Fatigued' if (d.get('pct_fresh', 72) < 40) else 'Technical Breakdown' }}</span>{% if d.get('swimmer_level') %}<span class="text-[10px] text-slate-500 ml-1">({{ 'Elite' if d.get('swimmer_level') == 'elite' else ('High Performance' if d.get('swimmer_level') == 'high_performance' else 'Novice') }})</span>{% endif %}
                                     </div>
                                 </div>
                             </td>

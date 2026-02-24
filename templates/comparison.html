@@ -47,6 +47,32 @@
         </div>
         <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-lg shadow-primary/20"><span class="material-symbols-outlined text-sm">ios_share</span>Export Report</button>
     </div>
+    <!-- Choose who to compare -->
+    <div class="bg-white dark:bg-slate-900/50 rounded-xl border border-primary/20 p-4">
+        <p class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Compare two sessions</p>
+        <form action="{{ url_for('comparison') }}" method="get" class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Session A</label>
+                <select name="a" class="rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark px-3 py-2 text-sm min-w-[200px]">
+                    <option value="current" {{ 'selected' if source_a == 'current' else '' }}>Current session (first half)</option>
+                    {% for ath in saved_athletes or [] %}
+                    <option value="{{ ath.id }}" {{ 'selected' if source_a == ath.id else '' }}>{{ ath.name }} ({{ 'Elite' if ath.level == 'elite' else ('High Performance' if ath.level == 'high_performance' else 'Novice') }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Session B</label>
+                <select name="b" class="rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark px-3 py-2 text-sm min-w-[200px]">
+                    <option value="current" {{ 'selected' if source_b == 'current' else '' }}>Current session (second half)</option>
+                    {% for ath in saved_athletes or [] %}
+                    <option value="{{ ath.id }}" {{ 'selected' if source_b == ath.id else '' }}>{{ ath.name }} ({{ 'Elite' if ath.level == 'elite' else ('High Performance' if ath.level == 'high_performance' else 'Novice') }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold">Compare</button>
+        </form>
+        <p class="text-xs text-slate-500 mt-2">Pick “Current session” to compare first half vs second half of the loaded file. Or pick two saved athletes to compare them.</p>
+    </div>
     <!-- Main Comparison Layout -->
     <div class="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_240px_1fr] gap-4">
         <!-- Session A -->
@@ -56,8 +82,8 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <span class="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">Session A</span>
-                        <h3 class="text-lg font-bold">Baseline - Fresh</h3>
-                        <p class="text-xs text-slate-500">First half of session • Strokes 1–{{ (d.get('stroke_count') or 0) // 2 }}</p>
+                        <h3 class="text-lg font-bold">{{ a.get('name', 'Baseline') }}{% if a.get('level') %} <span class="text-slate-500 font-normal">({{ a.get('level') }})</span>{% endif %}</h3>
+                        <p class="text-xs text-slate-500">{% if a.get('name') and 'first half' in (a.get('name')|string) %}First half of session • Strokes 1–{{ (d.get('stroke_count') or 0) // 2 }}{% else %}Saved session • {{ (d.get('stroke_count') or 0) }} strokes{% endif %}</p>
                     </div>
                 </div>
                 <div class="aspect-video bg-slate-800 rounded-lg overflow-hidden relative flex items-center justify-center">
@@ -134,8 +160,8 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <span class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Session B</span>
-                        <h3 class="text-lg font-bold">Competition - Fatigued</h3>
-                        <p class="text-xs text-slate-500">Second half of session • Strokes {{ (d.get('stroke_count') or 0) // 2 + 1 }}–{{ d.get('stroke_count', 0) }}</p>
+                        <h3 class="text-lg font-bold">{{ b.get('name', 'Comparison') }}{% if b.get('level') %} <span class="text-slate-500 font-normal">({{ b.get('level') }})</span>{% endif %}</h3>
+                        <p class="text-xs text-slate-500">{% if b.get('name') and 'second half' in (b.get('name')|string) %}Second half of session • Strokes {{ (d.get('stroke_count') or 0) // 2 + 1 }}–{{ d.get('stroke_count', 0) }}{% else %}Saved session • {{ (d.get('stroke_count') or 0) }} strokes{% endif %}</p>
                     </div>
                 </div>
                 <div class="aspect-video bg-slate-800 rounded-lg overflow-hidden relative flex items-center justify-center">
