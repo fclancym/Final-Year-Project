@@ -52,6 +52,7 @@
         </div>
     </header>
     <div class="p-8 space-y-8">
+        <p class="text-sm text-slate-600 dark:text-slate-400">Summary of the current session. Click a row to see a detailed breakdown.</p>
         <!-- KPI Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm">
@@ -61,6 +62,7 @@
                 </div>
                 <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Avg Stroke Efficiency</p>
                 <h3 class="text-2xl font-bold mt-1">{{ d.get('sei_pct', 82.4) }}%</h3>
+                <p class="text-xs text-slate-500 mt-1">How efficient the strokes were overall (higher = better)</p>
             </div>
             <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm">
                 <div class="flex justify-between items-start mb-4">
@@ -69,6 +71,7 @@
                 </div>
                 <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Fatigue Risk Alert</p>
                 <h3 class="text-2xl font-bold mt-1">{{ 1 if (d.get('pct_fresh', 72) < 70) else 0 }} Athlete{{ 's' if (d.get('pct_fresh', 72) < 70) else '' }}</h3>
+                <p class="text-xs text-slate-500 mt-1">Sessions where efficiency dropped (tired or form slipped)</p>
             </div>
             <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm">
                 <div class="flex justify-between items-start mb-4">
@@ -77,6 +80,7 @@
                 </div>
                 <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Active Sensors</p>
                 <h3 class="text-2xl font-bold mt-1">18 / 20</h3>
+                <p class="text-xs text-slate-500 mt-1">IMU devices connected (for multi-athlete setup)</p>
             </div>
             <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm">
                 <div class="flex justify-between items-start mb-4">
@@ -85,12 +89,16 @@
                 </div>
                 <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Weekly Team Volume</p>
                 <h3 class="text-2xl font-bold mt-1">142.5 km</h3>
+                <p class="text-xs text-slate-500 mt-1">Total distance swam by the team this week</p>
             </div>
         </div>
         <!-- Athlete Roster -->
         <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-200 dark:border-primary/10 flex items-center justify-between">
-                <h3 class="font-bold text-lg">Athlete Roster</h3>
+                <div>
+                    <h3 class="font-bold text-lg">Session / Athlete list</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">SEI = stroke efficiency. Fatigue index = how much of the session was “tired” vs “fresh”. Click a row for the full breakdown.</p>
+                </div>
                 <div class="flex gap-3">
                     <input class="bg-slate-50 dark:bg-background-dark/50 border rounded-lg py-1.5 pl-10 pr-4 text-sm" placeholder="Search athlete..." type="text"/>
                     <button class="flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-primary/20 rounded-lg text-sm font-medium">Filter</button>

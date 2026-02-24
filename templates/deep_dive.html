@@ -54,62 +54,79 @@
                     <button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-lg shadow-primary/20"><span class="material-symbols-outlined text-sm">edit_note</span>Add Coach Note</button>
                 </div>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <p class="text-xs text-slate-500 mt-2 mb-1">Quick numbers for this swim:</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-1">
                 <div class="bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50">
                     <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Avg Velocity</p>
                     <p class="text-xl font-bold">{{ d.get('avg_velocity', 1.68) }} <span class="text-xs text-slate-400 font-normal">m/s</span></p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Average speed through the water</p>
                 </div>
                 <div class="bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50">
                     <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Stroke Count</p>
                     <p class="text-xl font-bold">{{ d.get('stroke_count', 284) }} <span class="text-xs text-slate-400 font-normal">Total</span></p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Number of arm strokes in this session</p>
                 </div>
                 <div class="bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50">
                     <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Duration</p>
                     <p class="text-xl font-bold">{{ d.get('duration_str', '04:12.55') }}</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Total time swam (min:sec)</p>
                 </div>
                 <div class="bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50">
                     <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Peak Power</p>
                     <p class="text-xl font-bold text-primary">{{ d.get('peak_power', 342) }} <span class="text-xs text-slate-400 font-normal">Watts</span></p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Strongest single stroke (like a power meter)</p>
                 </div>
             </div>
         </header>
         <div class="p-6 space-y-6">
+            <p class="text-sm text-slate-600 dark:text-slate-400">This page breaks down one swim so you can see where efficiency and form changed from start to finish. Use the chart and boxes below to spot fatigue or technique drop-off.</p>
             <!-- SEI Chart -->
             <section class="bg-white dark:bg-slate-900/40 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm chart-container">
-                <div class="flex items-center justify-between mb-8">
-                    <div><h3 class="text-lg font-bold">Stroke Efficiency Index (SEI) Over Time</h3><p class="text-sm text-slate-500">Longitudinal IMU Data Analytics - {{ d.get('stroke_count', 0) }} strokes</p></div>
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-primary"></div><span class="text-xs font-medium text-slate-400">SEI Score</span></div>
-                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-rose-500"></div><span class="text-xs font-medium text-slate-400">Change Point (Fatigue)</span></div>
-                    </div>
+                <h3 class="text-lg font-bold">How efficient was each stroke? (SEI chart)</h3>
+                <div class="mt-2 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <p class="text-sm text-slate-700 dark:text-slate-300"><strong>What you’re looking at:</strong> This chart shows <strong>stroke efficiency (SEI)</strong> from the first stroke to the last. SEI is “how much distance you get per unit of effort” — like miles per gallon for your stroke. <strong>Higher line = more efficient.</strong> If the line goes down over time, the swimmer became less efficient (e.g. tired or form dropped). A red marker means we detected a clear drop in efficiency at that point in the swim.</p>
                 </div>
-                <div class="relative h-[300px] w-full mt-4">
-                    <svg class="w-full h-full" fill="none" preserveAspectRatio="xMidYMid meet" viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg">
-                        <defs><linearGradient id="seiGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#13a4ec" stop-opacity="0.2"/><stop offset="100%" stop-color="#13a4ec" stop-opacity="0"/></linearGradient></defs>
-                        <line stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="1000" y1="50" y2="50" class="text-slate-200 dark:text-slate-800"/>
-                        <line stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="1000" y1="150" y2="150" class="text-slate-200 dark:text-slate-800"/>
-                        <line stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="1000" y1="250" y2="250" class="text-slate-200 dark:text-slate-800"/>
-                        <path d="{{ d.get('sei_chart_path', 'M0,125 L1000,125') }} L1000,300 L0,300 Z" fill="url(#seiGrad)"/>
-                        <path d="{{ d.get('sei_chart_path', 'M0,125 L1000,125') }}" fill="none" stroke="#13a4ec" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                        {% if d.get('change_point_x') is not none %}
-                        <line stroke="#f43f5e" stroke-dasharray="8 4" stroke-width="2" x1="{{ d.change_point_x }}" x2="{{ d.change_point_x }}" y1="0" y2="300"/>
-                        <circle cx="{{ d.change_point_x }}" cy="150" fill="#f43f5e" r="8"/>
-                        {% endif %}
-                    </svg>
+                <div class="flex items-center gap-6 mt-4 flex-wrap">
+                    <div class="flex items-center gap-2"><div class="w-4 h-0.5 bg-primary rounded"></div><span class="text-xs font-medium text-slate-600 dark:text-slate-400">Blue line = your efficiency for each stroke (higher is better)</span></div>
                     {% if d.get('change_points') %}
-                    <div class="absolute top-10 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg" style="left: {{ (d.change_point_x or 500) - 80 }}px">CRITICAL CHANGE POINT: stroke {{ d.change_points[0] }}<div class="font-normal opacity-90">Technique Degraded</div></div>
+                    <div class="flex items-center gap-2"><div class="w-4 h-4 rounded-full bg-rose-500 border-2 border-white shadow"></div><span class="text-xs font-medium text-slate-600 dark:text-slate-400">Red marker = where efficiency dropped (focus training after this point)</span></div>
                     {% endif %}
                 </div>
-                <div class="flex justify-between mt-4 text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
-                    <span>0</span><span>Stroke</span><span>{{ (d.get('stroke_count') or 0) // 2 }}</span>{% if d.get('change_points') %}<span class="text-rose-500">Change</span>{% endif %}<span>{{ d.get('stroke_count', 0) }}</span>
+                <div class="relative h-[300px] w-full mt-4 flex">
+                    <div class="flex flex-col justify-between py-2 pr-2 text-[10px] text-slate-500 font-medium">
+                        <span>Higher<br/>efficiency</span>
+                        <span>Lower<br/>efficiency</span>
+                    </div>
+                    <div class="flex-1 relative">
+                        <svg class="w-full h-full" fill="none" preserveAspectRatio="xMidYMid meet" viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg">
+                            <defs><linearGradient id="seiGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#13a4ec" stop-opacity="0.2"/><stop offset="100%" stop-color="#13a4ec" stop-opacity="0"/></linearGradient></defs>
+                            <line stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="1000" y1="50" y2="50" class="text-slate-200 dark:text-slate-800"/>
+                            <line stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="1000" y1="150" y2="150" class="text-slate-200 dark:text-slate-800"/>
+                            <line stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="1000" y1="250" y2="250" class="text-slate-200 dark:text-slate-800"/>
+                            <path d="{{ d.get('sei_chart_path', 'M0,125 L1000,125') }} L1000,300 L0,300 Z" fill="url(#seiGrad)"/>
+                            <path d="{{ d.get('sei_chart_path', 'M0,125 L1000,125') }}" fill="none" stroke="#13a4ec" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                            {% if d.get('change_point_x') is not none %}
+                            <line stroke="#f43f5e" stroke-dasharray="8 4" stroke-width="2" x1="{{ d.change_point_x }}" x2="{{ d.change_point_x }}" y1="0" y2="300"/>
+                            <circle cx="{{ d.change_point_x }}" cy="150" fill="#f43f5e" r="8"/>
+                            {% endif %}
+                        </svg>
+                        {% if d.get('change_points') %}
+                        <div class="absolute top-4 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap">Efficiency dropped around stroke {{ d.change_points[0] }} — worth focusing on form after this point</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <p class="text-center text-xs text-slate-500 mt-2 font-medium">Stroke number (start of swim → end of swim)</p>
+                <div class="flex justify-between mt-1 text-[10px] text-slate-500 px-2" style="margin-left: 2.5rem;">
+                    <span>1</span><span>{{ (d.get('stroke_count') or 0) // 2 }}</span><span>{{ d.get('stroke_count', 0) }}</span>
                 </div>
             </section>
             <!-- Diagnostic grid -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Hand Entry Angle -->
                 <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <div class="flex items-center justify-between mb-4"><h4 class="text-sm font-bold uppercase tracking-wide">Hand Entry Angle</h4><span class="material-symbols-outlined text-slate-400 text-lg">info</span></div>
-                    <div class="h-48 w-full flex flex-col justify-end gap-2 px-2">
+                    <h4 class="text-sm font-bold uppercase tracking-wide">Hand entry angle</h4>
+                    <p class="text-xs text-slate-500 mt-1 mb-3">Angle of the hand when it enters the water. Good angle = less drag and lower injury risk.</p>
+                    <div class="h-40 w-full flex flex-col justify-end gap-2 px-2">
                         <div class="flex items-end justify-between h-full gap-1">
                             <div class="w-1/2 flex items-end justify-around h-full border-r border-slate-700/20 pr-2">
                                 <div class="w-4 bg-primary/40 rounded-t h-[60%]"></div><div class="w-4 bg-primary rounded-t h-[75%]"></div><div class="w-4 bg-primary rounded-t h-[68%]"></div>
@@ -119,16 +136,17 @@
                             </div>
                         </div>
                         <div class="flex justify-between text-[10px] font-medium text-slate-500">
-                            <span class="text-primary font-bold">Efficient (&lt;35°)</span>
-                            <span class="text-rose-500 font-bold">Potential Injury (&gt;50°)</span>
+                            <span class="text-primary font-bold">Good (&lt;35°)</span>
+                            <span class="text-rose-500 font-bold">Risky (&gt;50°)</span>
                         </div>
                     </div>
-                    <p class="text-xs text-slate-500 mt-4 leading-relaxed">Session avg: <strong>{{ d.get('avg_entry_angle', 35) }}°</strong> — {{ d.get('entry_label', 'Good') }}. {{ 'Entries steepened in later strokes, increasing drag.' if d.get('entry_label') != 'Good' else 'Optimal range maintained.' }}</p>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-4 leading-relaxed p-2 rounded bg-slate-100/50 dark:bg-slate-800/50"><strong>Your session:</strong> Average {{ d.get('avg_entry_angle', 35) }}° — {{ d.get('entry_label', 'Good') }}. {{ 'Entries got steeper later in the swim (more drag; consider drills).' if d.get('entry_label') != 'Good' else 'Entry angle stayed in a good range.' }}</p>
                 </div>
                 <!-- Power vs Reach -->
                 <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <div class="flex items-center justify-between mb-4"><h4 class="text-sm font-bold uppercase tracking-wide">Power (W) vs Reach (m)</h4><span class="material-symbols-outlined text-slate-400 text-lg">scatter_plot</span></div>
-                    <div class="h-48 w-full relative">
+                    <h4 class="text-sm font-bold uppercase tracking-wide">Power vs reach</h4>
+                    <p class="text-xs text-slate-500 mt-1 mb-3">Each dot = one stroke. Blue = first half of swim, red = second half. Left = less reach; up = more power. You want good reach without over-pushing.</p>
+                    <div class="h-44 w-full relative">
                         <svg class="w-full h-full" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet">
                             <line stroke="currentColor" stroke-width="0.5" x1="20" x2="20" y1="10" y2="90" class="text-slate-700"/>
                             <line stroke="currentColor" stroke-width="0.5" x1="20" x2="190" y1="90" y2="90" class="text-slate-700"/>
@@ -142,15 +160,19 @@
                         <div class="absolute bottom-0 right-0 text-[8px] text-slate-500 uppercase">Reach (m)</div>
                         <div class="absolute top-0 left-0 text-[8px] text-slate-500 uppercase">Wattage</div>
                     </div>
-                    <div class="flex gap-4 mt-4">
-                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="text-[10px] font-bold">High DPS</span></div>
-                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-rose-500"></div><span class="text-[10px] font-bold">Shortened Reach</span></div>
+                    <div class="flex flex-wrap items-center gap-4 mt-4">
+                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="text-[10px] font-bold">First half (High DPS)</span></div>
+                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-rose-500"></div><span class="text-[10px] font-bold">Second half (Shortened Reach)</span></div>
+                        {% if d.get('scatter_range') %}
+                        <span class="text-[10px] text-slate-500">Reach {{ d.scatter_range.reach_min_m }}–{{ d.scatter_range.reach_max_m }} m · Power {{ d.scatter_range.power_min_w }}–{{ d.scatter_range.power_max_w }} W</span>
+                        {% endif %}
                     </div>
                 </div>
                 <!-- Cluster Fresh vs Fatigued -->
                 <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <div class="flex items-center justify-between mb-4"><h4 class="text-sm font-bold uppercase tracking-wide">Cluster: Fresh vs Fatigued</h4><span class="material-symbols-outlined text-slate-400 text-lg">pie_chart</span></div>
-                    <div class="flex items-center justify-center h-48">
+                    <h4 class="text-sm font-bold uppercase tracking-wide">Fresh vs fatigued</h4>
+                    <p class="text-xs text-slate-500 mt-1 mb-3">We split your strokes into “fresh” (efficient) vs “fatigued” (less efficient). The chart shows what share of the swim was in each.</p>
+                    <div class="flex items-center justify-center h-40">
                         <div class="relative w-32 h-32 flex items-center justify-center">
                             <svg class="w-32 h-32 -rotate-90" viewBox="0 0 36 36">
                                 <path d="M18 2.084 a 15.916 15.916 0 0 1 0 31.832 a 15.916 15.916 0 0 1 0 -31.832" fill="none" stroke="#1e3a5f" stroke-width="3"/>
@@ -158,13 +180,13 @@
                             </svg>
                             <div class="absolute text-center">
                                 <p class="text-2xl font-bold">{{ d.get('pct_fresh', 72) }}<span class="text-sm">%</span></p>
-                                <p class="text-[10px] uppercase font-bold text-slate-500">Fresh</p>
+                                <p class="text-[10px] uppercase font-bold text-slate-500">strokes “fresh”</p>
                             </div>
                         </div>
                     </div>
-                    <div class="mt-4 space-y-2">
-                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">Fresh Segment Efficiency</span><span class="text-xs font-bold text-primary">{{ d.get('fresh_sei', 0.94) }} SEI</span></div>
-                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">Fatigued Segment Efficiency</span><span class="text-xs font-bold text-rose-500">{{ d.get('fatigued_sei', 0.76) }} SEI</span></div>
+                    <div class="mt-3 space-y-2 p-2 rounded bg-slate-100/50 dark:bg-slate-800/50">
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-600 dark:text-slate-400">When fresh (efficient):</span><span class="text-xs font-bold text-primary">{{ d.get('fresh_sei', 0.94) }} SEI</span></div>
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-600 dark:text-slate-400">When fatigued (less efficient):</span><span class="text-xs font-bold text-rose-500">{{ d.get('fatigued_sei', 0.76) }} SEI</span></div>
                     </div>
                 </div>
             </div>
@@ -172,14 +194,14 @@
             <div class="bg-primary/5 border border-primary/20 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6">
                 <div class="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0"><span class="material-symbols-outlined">lightbulb</span></div>
                 <div class="flex-1">
-                    <h4 class="text-sm font-bold text-primary uppercase mb-1">Coach Recommendation</h4>
+                    <h4 class="text-sm font-bold text-primary uppercase mb-1">What to work on next</h4>
                     <p class="text-sm text-slate-600 dark:text-slate-300">
-                        {% if d.get('change_points') %}The data indicates a significant biomechanical breakdown near stroke {{ d.change_points[0] }}. Recommend focusing on <span class="font-bold text-primary">core stability drills</span> and <span class="font-bold text-primary">hand entry precision</span> under high-cardio stress to maintain SEI above 0.85.
-                        {% else %}Session efficiency is {{ d.get('sei_rating_10', 5) }}/10. {{ 'Focus on maintaining reach and entry angle in later strokes.' if d.get('pct_fresh', 72) < 80 else 'Good consistency across the session.' }}
+                        {% if d.get('change_points') %}Efficiency dropped around stroke {{ d.change_points[0] }}. To keep form strong for the whole swim, focus on <span class="font-bold text-primary">core stability</span> and <span class="font-bold text-primary">consistent hand entry</span> when you’re tired.
+                        {% else %}Overall efficiency this session: {{ d.get('sei_rating_10', 5) }}/10. {{ 'Try to keep your reach and hand entry steady in the second half of the swim.' if d.get('pct_fresh', 72) < 80 else 'Efficiency stayed consistent from start to finish — good job.' }}
                         {% endif %}
                     </p>
                 </div>
-                <button class="px-6 py-2 bg-primary text-white text-sm font-bold rounded-lg whitespace-nowrap">Generate Training Drill</button>
+                <button class="px-6 py-2 bg-primary text-white text-sm font-bold rounded-lg whitespace-nowrap">Suggest a drill</button>
             </div>
         </div>
     </main>

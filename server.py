@@ -116,6 +116,8 @@ def get_session_data(filepath=None, mass_kg=70, duration_sec=90, stroke_rate_spm
     reach_delta_cm = round(avg_reach_b - avg_reach_a, 0)
     angle_delta = round(avg_angle_b - avg_angle_a, 1)
 
+    scatter_pts, scatter_rng = _scatter_points(df)
+
     return {
         "stroke_count": len(df),
         "avg_velocity": avg_velocity,
@@ -160,8 +162,9 @@ def get_session_data(filepath=None, mass_kg=70, duration_sec=90, stroke_rate_spm
         # SEI chart: path and change point x (0-1000)
         "sei_chart_path": _sei_chart_path(sei_vals.values),
         "change_point_x": _change_point_x(change_points, len(df)),
-        # Scatter for Power vs Reach (normalized 0-180, 0-90 for SVG)
-        "scatter_points": _scatter_points(df),
+        # Scatter for Power vs Reach (normalized for SVG) + range for axis labels
+        "scatter_points": scatter_pts,
+        "scatter_range": scatter_rng,
     }
 
 
@@ -205,13 +208,15 @@ def _change_point_x(change_points, n_strokes):
 
 
 def _scatter_points(df):
-    """List of {x, y, color} for Power vs Reach scatter. x,y in 0-180, 0-90."""
+    """List of {x, y, color} for Power vs Reach scatter. x,y in plot area 20–190, 10–90.
+    Also returns scatter_range dict for axis labels.
+    """
     if len(df) == 0:
-        return []
-    pw = df["power_w"].values
-    rch = df["reach_m"].values * 100  # cm for scale
-    pw_mx, pw_mn = np.nanmax(pw), np.nanmin(pw)
-    rch_mx, rch_mn = np.nanmax(rch), np.nanmin(rch)
+        return [], None
+    pw = np.nan_to_num(df["power_w"].values, nan=0.0, posinf=0.0, neginf=0.0)
+    rch = np.nan_to_num(df["reach_m"].values, nan=0.0, posinf=0.0, neginf=0.0) * 100  # cm
+    pw_mx, pw_mn = float(np.max(pw)), float(np.min(pw))
+    rch_mx, rch_mn = float(np.max(rch)), float(np.min(rch))
     if pw_mx <= pw_mn:
         pw_mx = pw_mn + 1
     if rch_mx <= rch_mn:
@@ -221,9 +226,17 @@ def _scatter_points(df):
     for i in range(len(df)):
         x = 20 + (float(rch[i]) - rch_mn) / (rch_mx - rch_mn) * 160
         y = 90 - (float(pw[i]) - pw_mn) / (pw_mx - pw_mn) * 75
+        x = max(22, min(188, x))
+        y = max(12, min(88, y))
         color = "primary" if i < mid else "rose"
         out.append({"x": round(x, 1), "y": round(y, 1), "c": color})
-    return out
+    range_dict = {
+        "reach_min_m": round(rch_mn / 100, 3),
+        "reach_max_m": round(rch_mx / 100, 3),
+        "power_min_w": round(pw_mn, 1),
+        "power_max_w": round(pw_mx, 1),
+    }
+    return out, range_dict
 
 
 def _get_data_or_redirect():
