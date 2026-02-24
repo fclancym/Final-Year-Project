@@ -9,3 +9,4 @@ matplotlib>=3.5
 ruptures>=1.1.8
 streamlit>=1.28
 plotly>=5.18
+flask>=3.0

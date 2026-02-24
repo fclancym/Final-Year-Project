@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Data Upload - SwimCoach Elite Biomechanics</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = { darkMode: "class", theme: { extend: { colors: { "primary": "#13a4ec", "background-light": "#f6f7f8", "background-dark": "#101c22" }, fontFamily: { "display": ["Lexend"] }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" } } } }
+    </script>
+    <style>body { font-family: 'Lexend', sans-serif; }</style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 bg-white dark:bg-background-dark border-r border-slate-200 dark:border-primary/20 flex flex-col h-screen shrink-0">
+    <div class="p-6 flex items-center gap-3">
+        <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white"><span class="material-symbols-outlined">waves</span></div>
+        <div>
+            <h1 class="text-lg font-bold leading-tight">SwimCoach</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Elite Biomechanics</p>
+        </div>
+    </div>
+    <nav class="flex-1 px-4 py-4 space-y-1">
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="/dashboard"><span class="material-symbols-outlined">group</span><span class="text-sm font-medium">Team Overview</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="/deep-dive"><span class="material-symbols-outlined">query_stats</span><span class="text-sm font-medium">Individual Analysis</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="/comparison"><span class="material-symbols-outlined">compare_arrows</span><span class="text-sm font-medium">Comparison</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary transition-colors" href="/data-upload"><span class="material-symbols-outlined">cloud_upload</span><span class="text-sm font-medium">Data Upload</span></a>
+        <div class="pt-4 pb-2"><p class="px-3 text-[10px] uppercase tracking-wider text-slate-400 font-bold">Reporting</p></div>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="#"><span class="material-symbols-outlined">description</span><span class="text-sm font-medium">Training Logs</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="#"><span class="material-symbols-outlined">settings</span><span class="text-sm font-medium">Configuration</span></a>
+    </nav>
+    <div class="p-4 border-t border-slate-200 dark:border-primary/20">
+        <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-primary/5 cursor-pointer">
+            <div class="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/40"></div>
+            <div class="overflow-hidden"><p class="text-sm font-semibold truncate">Coach</p><p class="text-xs text-slate-500 truncate">Lead</p></div>
+        </div>
+    </div>
+</aside>
+<!-- Main -->
+<main class="flex-1 overflow-y-auto bg-slate-50 dark:bg-background-dark/95">
+    <header class="h-16 border-b border-slate-200 dark:border-primary/20 px-8 flex items-center justify-between sticky top-0 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md z-10">
+        <h2 class="text-xl font-bold">Data Upload</h2>
+        <a href="/dashboard" class="text-sm font-medium text-primary hover:underline">Back to Dashboard</a>
+    </header>
+    <div class="p-8 max-w-2xl">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="space-y-2 mb-6">
+            {% for category, message in messages %}
+            <div class="p-4 rounded-lg border {{ 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300' if category == 'error' else 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300' }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if has_upload %}
+        <div class="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20">
+            <p class="text-sm font-medium text-primary">A CSV file is currently loaded. All dashboard pages use this file.</p>
+            <a href="/data-upload/clear" class="inline-block mt-2 text-sm font-bold text-slate-500 hover:text-rose-500">Clear and use synthetic data</a>
+        </div>
+        {% endif %}
+
+        <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm p-6 space-y-6">
+            <h3 class="text-lg font-bold">Upload IMU CSV</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Upload a CSV export from your Shimmer (or compatible) IMU. Expected columns: <strong>Timestamp</strong>, <strong>Accelerometer X/Y/Z</strong>, <strong>Gyroscope X/Y/Y</strong>. Acceleration in m/s² or g; time in seconds or ms.</p>
+
+            <form action="{{ url_for('data_upload') }}" method="post" enctype="multipart/form-data" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2">Swimmer mass (kg)</label>
+                    <input type="number" name="mass_kg" value="70" min="30" max="150" step="1" class="w-32 rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"/>
+                    <p class="text-xs text-slate-500 mt-1">Used for power calculation (P = m × a × reach × stroke rate).</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2">CSV file</label>
+                    <input type="file" name="csv_file" accept=".csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-white file:font-bold file:cursor-pointer hover:file:bg-primary/90"/>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button type="submit" name="upload" value="1" class="px-6 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
+                        Upload and process CSV
+                    </button>
+                    <button type="submit" name="use_synthetic" value="1" class="px-6 py-2.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                        Use synthetic data instead
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <p class="mt-6 text-xs text-slate-500">If your CSV uses different column names, edit <code class="bg-slate-200 dark:bg-slate-800 px-1 rounded">config.py</code> (DEFAULT_ACCEL_COLS, DEFAULT_GYRO_COLS, DEFAULT_TIME_COL, ACCEL_UNITS).</p>
+    </div>
+</main>
+</body>
+</html>

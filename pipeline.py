@@ -31,10 +31,25 @@ def load_imu_csv(
     If CSV has no sample rate info, use config.DEFAULT_SAMPLE_RATE_HZ.
     """
     df = pd.read_csv(filepath)
+    if len(df) == 0:
+        raise ValueError("CSV file is empty or has no data rows. Please upload a file with at least one row of IMU data.")
     time_col = time_col or config.DEFAULT_TIME_COL
     accel_cols = accel_cols or config.DEFAULT_ACCEL_COLS
     gyro_cols = gyro_cols or config.DEFAULT_GYRO_COLS
     accel_units = accel_units or config.ACCEL_UNITS
+    # If default columns missing, try alternative column names (Shimmer, then simple Accel_X / Gyro_X style)
+    if accel_cols["x"] not in df.columns and getattr(config, "SHIMMER_ACCEL_COLS", None):
+        if all(config.SHIMMER_ACCEL_COLS[k] in df.columns for k in ["x", "y", "z"]):
+            accel_cols = config.SHIMMER_ACCEL_COLS
+    if accel_cols["x"] not in df.columns and getattr(config, "SIMPLE_ACCEL_COLS", None):
+        if all(config.SIMPLE_ACCEL_COLS[k] in df.columns for k in ["x", "y", "z"]):
+            accel_cols = config.SIMPLE_ACCEL_COLS
+    if gyro_cols["x"] not in df.columns and getattr(config, "SHIMMER_GYRO_COLS", None):
+        if all(config.SHIMMER_GYRO_COLS[k] in df.columns for k in ["x", "y", "z"]):
+            gyro_cols = config.SHIMMER_GYRO_COLS
+    if gyro_cols["x"] not in df.columns and getattr(config, "SIMPLE_GYRO_COLS", None):
+        if all(config.SIMPLE_GYRO_COLS[k] in df.columns for k in ["x", "y", "z"]):
+            gyro_cols = config.SIMPLE_GYRO_COLS
 
     # Normalize time to seconds from start
     if time_col not in df.columns:
@@ -46,7 +61,9 @@ def load_imu_csv(
         else:
             df["Timestamp"] = np.arange(len(df)) / config.DEFAULT_SAMPLE_RATE_HZ
             time_col = "Timestamp"
-    t = pd.to_numeric(df[time_col], errors="coerce").ffill()
+    t = pd.to_numeric(df[time_col], errors="coerce").ffill().bfill()
+    if len(t) == 0 or pd.isna(t.iloc[0]):
+        raise ValueError("CSV has no valid time column or all time values are missing. Need a 'Timestamp' (or time/t) column with numeric values.")
     if t.iloc[0] > 1e6:  # possibly milliseconds
         t = t / 1000.0
     t = t - t.iloc[0]

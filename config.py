@@ -40,5 +40,9 @@ DEFAULT_TIME_COL = "Timestamp"
 SHIMMER_ACCEL_COLS = {"x": "Low Noise Accelerometer X", "y": "Low Noise Accelerometer Y", "z": "Low Noise Accelerometer Z"}
 SHIMMER_GYRO_COLS = {"x": "Gyroscope X", "y": "Gyroscope Y", "z": "Gyroscope Z"}
 
+# Short names (e.g. Accel_X, Accel_Y, Accel_Z, Gyro_X, Gyro_Y, Gyro_Z)
+SIMPLE_ACCEL_COLS = {"x": "Accel_X", "y": "Accel_Y", "z": "Accel_Z"}
+SIMPLE_GYRO_COLS = {"x": "Gyro_X", "y": "Gyro_Y", "z": "Gyro_Z"}
+
 # Units: set to "g" if your CSV stores acceleration in g, "m/s2" if in m/s².
 ACCEL_UNITS = "m/s2"  # or "g"

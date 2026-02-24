@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Swimmer Biomechanical Deep-Dive - Hydro-Logic</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = { darkMode: "class", theme: { extend: { colors: { "primary": "#13a4ec", "background-light": "#f6f7f8", "background-dark": "#101c22" }, fontFamily: { "display": ["Lexend"] }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" } } } }
+    </script>
+    <style>body { font-family: 'Lexend', sans-serif; } .chart-container { background: linear-gradient(180deg, rgba(19, 164, 236, 0.05) 0%, rgba(16, 28, 34, 0) 100%); }</style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden">
+{% set d = data or {} %}
+<div class="flex h-full w-full">
+    <!-- Sidebar -->
+    <aside class="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark flex flex-col justify-between p-4 shrink-0">
+        <div class="flex flex-col gap-8">
+            <div class="flex items-center gap-3 px-2">
+                <div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white"><span class="material-symbols-outlined">waves</span></div>
+                <div><h1 class="font-bold text-sm tracking-tight leading-none uppercase">Hydro-Logic</h1><p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">BIOMECHANICAL LAB</p></div>
+            </div>
+            <nav class="flex flex-col gap-2">
+                <a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-primary/10 hover:text-primary rounded-lg transition-all" href="/dashboard"><span class="material-symbols-outlined">grid_view</span><span class="text-sm font-medium">Dashboard</span></a>
+                <a class="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary border-r-2 border-primary rounded-lg" href="/deep-dive"><span class="material-symbols-outlined">groups</span><span class="text-sm font-medium">Athlete Roster</span></a>
+                <a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-primary/10 hover:text-primary rounded-lg transition-all" href="/comparison"><span class="material-symbols-outlined">history</span><span class="text-sm font-medium">Session History</span></a>
+                <a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-primary/10 hover:text-primary rounded-lg transition-all" href="#"><span class="material-symbols-outlined">analytics</span><span class="text-sm font-medium">Reports</span></a>
+                <a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-primary/10 hover:text-primary rounded-lg transition-all" href="#"><span class="material-symbols-outlined">settings</span><span class="text-sm font-medium">Lab Settings</span></a>
+            </nav>
+        </div>
+        <div class="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex items-center gap-3">
+            <div class="h-10 w-10 rounded-full bg-primary/20 border-2 border-primary"></div>
+            <div class="overflow-hidden"><p class="text-xs font-bold truncate">Coach</p><p class="text-[10px] text-slate-500">Elite Performance Dir.</p></div>
+        </div>
+    </aside>
+    <!-- Main -->
+    <main class="flex-1 flex flex-col overflow-y-auto">
+        <header class="p-6 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-background-dark/50 backdrop-blur-md sticky top-0 z-10">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="h-16 w-16 rounded-full bg-primary/20 ring-4 ring-primary/20"></div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-2xl font-bold">Current Session</h2>
+                            <span class="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Elite</span>
+                        </div>
+                        <p class="text-slate-500 text-sm font-medium italic">Synthetic IMU • Pipeline • {{ d.get('duration_str', '01:30.00') }}</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <a href="/comparison" class="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm font-bold border border-slate-200 dark:border-slate-700"><span class="material-symbols-outlined text-sm">compare_arrows</span>Compare Sessions</a>
+                    <button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-lg shadow-primary/20"><span class="material-symbols-outlined text-sm">edit_note</span>Add Coach Note</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <div class="bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50">
+                    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Avg Velocity</p>
+                    <p class="text-xl font-bold">{{ d.get('avg_velocity', 1.68) }} <span class="text-xs text-slate-400 font-normal">m/s</span></p>
+                </div>
+                <div class="bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50">
+                    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Stroke Count</p>
+                    <p class="text-xl font-bold">{{ d.get('stroke_count', 284) }} <span class="text-xs text-slate-400 font-normal">Total</span></p>
+                </div>
+                <div class="bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50">
+                    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Duration</p>
+                    <p class="text-xl font-bold">{{ d.get('duration_str', '04:12.55') }}</p>
+                </div>
+                <div class="bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50">
+                    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Peak Power</p>
+                    <p class="text-xl font-bold text-primary">{{ d.get('peak_power', 342) }} <span class="text-xs text-slate-400 font-normal">Watts</span></p>
+                </div>
+            </div>
+        </header>
+        <div class="p-6 space-y-6">
+            <!-- SEI Chart -->
+            <section class="bg-white dark:bg-slate-900/40 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm chart-container">
+                <div class="flex items-center justify-between mb-8">
+                    <div><h3 class="text-lg font-bold">Stroke Efficiency Index (SEI) Over Time</h3><p class="text-sm text-slate-500">Longitudinal IMU Data Analytics - {{ d.get('stroke_count', 0) }} strokes</p></div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-primary"></div><span class="text-xs font-medium text-slate-400">SEI Score</span></div>
+                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-rose-500"></div><span class="text-xs font-medium text-slate-400">Change Point (Fatigue)</span></div>
+                    </div>
+                </div>
+                <div class="relative h-[300px] w-full mt-4">
+                    <svg class="w-full h-full" fill="none" preserveAspectRatio="xMidYMid meet" viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg">
+                        <defs><linearGradient id="seiGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#13a4ec" stop-opacity="0.2"/><stop offset="100%" stop-color="#13a4ec" stop-opacity="0"/></linearGradient></defs>
+                        <line stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="1000" y1="50" y2="50" class="text-slate-200 dark:text-slate-800"/>
+                        <line stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="1000" y1="150" y2="150" class="text-slate-200 dark:text-slate-800"/>
+                        <line stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="1000" y1="250" y2="250" class="text-slate-200 dark:text-slate-800"/>
+                        <path d="{{ d.get('sei_chart_path', 'M0,125 L1000,125') }} L1000,300 L0,300 Z" fill="url(#seiGrad)"/>
+                        <path d="{{ d.get('sei_chart_path', 'M0,125 L1000,125') }}" fill="none" stroke="#13a4ec" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                        {% if d.get('change_point_x') is not none %}
+                        <line stroke="#f43f5e" stroke-dasharray="8 4" stroke-width="2" x1="{{ d.change_point_x }}" x2="{{ d.change_point_x }}" y1="0" y2="300"/>
+                        <circle cx="{{ d.change_point_x }}" cy="150" fill="#f43f5e" r="8"/>
+                        {% endif %}
+                    </svg>
+                    {% if d.get('change_points') %}
+                    <div class="absolute top-10 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg" style="left: {{ (d.change_point_x or 500) - 80 }}px">CRITICAL CHANGE POINT: stroke {{ d.change_points[0] }}<div class="font-normal opacity-90">Technique Degraded</div></div>
+                    {% endif %}
+                </div>
+                <div class="flex justify-between mt-4 text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+                    <span>0</span><span>Stroke</span><span>{{ (d.get('stroke_count') or 0) // 2 }}</span>{% if d.get('change_points') %}<span class="text-rose-500">Change</span>{% endif %}<span>{{ d.get('stroke_count', 0) }}</span>
+                </div>
+            </section>
+            <!-- Diagnostic grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Hand Entry Angle -->
+                <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-4"><h4 class="text-sm font-bold uppercase tracking-wide">Hand Entry Angle</h4><span class="material-symbols-outlined text-slate-400 text-lg">info</span></div>
+                    <div class="h-48 w-full flex flex-col justify-end gap-2 px-2">
+                        <div class="flex items-end justify-between h-full gap-1">
+                            <div class="w-1/2 flex items-end justify-around h-full border-r border-slate-700/20 pr-2">
+                                <div class="w-4 bg-primary/40 rounded-t h-[60%]"></div><div class="w-4 bg-primary rounded-t h-[75%]"></div><div class="w-4 bg-primary rounded-t h-[68%]"></div>
+                            </div>
+                            <div class="w-1/2 flex items-end justify-around h-full pl-2">
+                                <div class="w-4 bg-rose-500/60 rounded-t h-[85%]"></div><div class="w-4 bg-rose-600 rounded-t h-[92%]"></div><div class="w-4 bg-rose-500 rounded-t h-[88%]"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-medium text-slate-500">
+                            <span class="text-primary font-bold">Efficient (&lt;35°)</span>
+                            <span class="text-rose-500 font-bold">Potential Injury (&gt;50°)</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-4 leading-relaxed">Session avg: <strong>{{ d.get('avg_entry_angle', 35) }}°</strong> — {{ d.get('entry_label', 'Good') }}. {{ 'Entries steepened in later strokes, increasing drag.' if d.get('entry_label') != 'Good' else 'Optimal range maintained.' }}</p>
+                </div>
+                <!-- Power vs Reach -->
+                <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-4"><h4 class="text-sm font-bold uppercase tracking-wide">Power (W) vs Reach (m)</h4><span class="material-symbols-outlined text-slate-400 text-lg">scatter_plot</span></div>
+                    <div class="h-48 w-full relative">
+                        <svg class="w-full h-full" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet">
+                            <line stroke="currentColor" stroke-width="0.5" x1="20" x2="20" y1="10" y2="90" class="text-slate-700"/>
+                            <line stroke="currentColor" stroke-width="0.5" x1="20" x2="190" y1="90" y2="90" class="text-slate-700"/>
+                            {% for pt in d.get('scatter_points') or [] %}
+                            <circle cx="{{ pt.x }}" cy="{{ pt.y }}" fill="{{ '#13a4ec' if pt.c == 'primary' else '#f43f5e' }}" opacity="0.6" r="3"/>
+                            {% endfor %}
+                            {% if not d.get('scatter_points') %}
+                            <circle cx="40" cy="30" fill="#13a4ec" opacity="0.6" r="3"/><circle cx="60" cy="40" fill="#13a4ec" opacity="0.6" r="3"/><circle cx="120" cy="70" fill="#f43f5e" opacity="0.6" r="3"/><circle cx="140" cy="75" fill="#f43f5e" opacity="0.6" r="3"/>
+                            {% endif %}
+                        </svg>
+                        <div class="absolute bottom-0 right-0 text-[8px] text-slate-500 uppercase">Reach (m)</div>
+                        <div class="absolute top-0 left-0 text-[8px] text-slate-500 uppercase">Wattage</div>
+                    </div>
+                    <div class="flex gap-4 mt-4">
+                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="text-[10px] font-bold">High DPS</span></div>
+                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-rose-500"></div><span class="text-[10px] font-bold">Shortened Reach</span></div>
+                    </div>
+                </div>
+                <!-- Cluster Fresh vs Fatigued -->
+                <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-4"><h4 class="text-sm font-bold uppercase tracking-wide">Cluster: Fresh vs Fatigued</h4><span class="material-symbols-outlined text-slate-400 text-lg">pie_chart</span></div>
+                    <div class="flex items-center justify-center h-48">
+                        <div class="relative w-32 h-32 flex items-center justify-center">
+                            <svg class="w-32 h-32 -rotate-90" viewBox="0 0 36 36">
+                                <path d="M18 2.084 a 15.916 15.916 0 0 1 0 31.832 a 15.916 15.916 0 0 1 0 -31.832" fill="none" stroke="#1e3a5f" stroke-width="3"/>
+                                <path d="M18 2.084 a 15.916 15.916 0 0 1 0 31.832 a 15.916 15.916 0 0 1 0 -31.832" fill="none" stroke="#13a4ec" stroke-width="3" stroke-dasharray="{{ ((d.get('pct_fresh', 72) / 100) * 100)|round(1) }}, {{ (100 - (d.get('pct_fresh', 72) / 100) * 100)|round(1) }}"/>
+                            </svg>
+                            <div class="absolute text-center">
+                                <p class="text-2xl font-bold">{{ d.get('pct_fresh', 72) }}<span class="text-sm">%</span></p>
+                                <p class="text-[10px] uppercase font-bold text-slate-500">Fresh</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 space-y-2">
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">Fresh Segment Efficiency</span><span class="text-xs font-bold text-primary">{{ d.get('fresh_sei', 0.94) }} SEI</span></div>
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">Fatigued Segment Efficiency</span><span class="text-xs font-bold text-rose-500">{{ d.get('fatigued_sei', 0.76) }} SEI</span></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Coach Recommendation -->
+            <div class="bg-primary/5 border border-primary/20 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6">
+                <div class="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0"><span class="material-symbols-outlined">lightbulb</span></div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-bold text-primary uppercase mb-1">Coach Recommendation</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-300">
+                        {% if d.get('change_points') %}The data indicates a significant biomechanical breakdown near stroke {{ d.change_points[0] }}. Recommend focusing on <span class="font-bold text-primary">core stability drills</span> and <span class="font-bold text-primary">hand entry precision</span> under high-cardio stress to maintain SEI above 0.85.
+                        {% else %}Session efficiency is {{ d.get('sei_rating_10', 5) }}/10. {{ 'Focus on maintaining reach and entry angle in later strokes.' if d.get('pct_fresh', 72) < 80 else 'Good consistency across the session.' }}
+                        {% endif %}
+                    </p>
+                </div>
+                <button class="px-6 py-2 bg-primary text-white text-sm font-bold rounded-lg whitespace-nowrap">Generate Training Drill</button>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

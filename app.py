@@ -49,6 +49,34 @@ def get_theme_css(dark_mode):
     """
 
 
+def sei_to_rating_0_10(sei_series):
+    """
+    Convert SEI (Reach/Power) to a rating out of 10 for this session.
+    Uses min-max normalization within the session: best strokes → 10, worst → 0.
+    Returns (session_rating_0_10, interpretation_string).
+    """
+    s = sei_series.replace([np.inf, -np.inf], np.nan).dropna()
+    if len(s) < 2:
+        return None, "Not enough valid SEI values"
+    mn, mx = s.min(), s.max()
+    if mx <= mn:
+        return 5.0, "Neutral (constant efficiency)"
+    # Per-stroke rating 0-10, then average for session
+    ratings = 10.0 * (s - mn) / (mx - mn)
+    session_rating = float(ratings.mean())
+    if session_rating >= 9:
+        interp = "Extremely efficient"
+    elif session_rating >= 7:
+        interp = "Very efficient"
+    elif session_rating >= 5:
+        interp = "Moderate efficiency"
+    elif session_rating >= 2:
+        interp = "Inefficient"
+    else:
+        interp = "Very inefficient"
+    return round(session_rating, 1), interp
+
+
 def render_metric_info(ml_goal, technique, libraries, input_features, output_result):
     """Render a simplified info table for a metric/ML technique."""
     st.markdown("#### Methodology")
@@ -443,6 +471,7 @@ def main():
     avg_entry_deg = float(df["entry_angle_deg"].mean())
     sei_vals = df["sei"].replace([np.inf, -np.inf], np.nan)
     avg_sei = float(sei_vals.mean()) if sei_vals.notna().any() else None
+    sei_rating, sei_interpretation = sei_to_rating_0_10(df["sei"])
     if avg_entry_deg >= -10 and avg_entry_deg <= 10:
         entry_label = "Good"
     elif avg_entry_deg < -10:
@@ -514,10 +543,14 @@ def main():
         )
 
     with tab_sei:
+        st.markdown("**How SEI is calculated:** SEI = **Reach ÷ Power** (metres per Watt). Higher values mean more distance per unit effort, i.e. more efficient.")
+        if sei_rating is not None:
+            st.markdown(f"**Session value:** **{sei_rating}/10** — *{sei_interpretation}*")
+            st.caption("Rating is 0–10 from your session: 9–10 = extremely efficient, 7–9 = very good, 5–7 = moderate, 2–5 = inefficient, 0–2 = very inefficient.")
+        elif sei_interpretation:
+            st.markdown(f"**Session value:** {sei_interpretation}")
         sei_clean = df["sei"].replace([np.inf, -np.inf], np.nan)
         change_points = detect_sei_change_points(sei_clean.values) if len(df) > 4 else []
-        if avg_sei is not None and not np.isnan(avg_sei):
-            st.markdown(f"**Session value:** {avg_sei:.4f} average Stroke Efficiency Index")
         st.plotly_chart(plot_sei(df, dark_mode, change_points), use_container_width=True)
         if change_points:
             st.info(f"**Change points detected** at strokes: {change_points}. Efficiency may have shifted at these points.")
