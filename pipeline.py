@@ -4,6 +4,7 @@ End-to-end pipeline: load IMU CSV -> process -> extract features -> (optional) M
 
 import numpy as np
 import pandas as pd
+from scipy import interpolate
 
 import config
 from signal_processing import apply_lowpass_to_imu, madgwick_fusion, quaternion_to_euler
@@ -18,6 +19,25 @@ from visualization import (
 )
 
 
+def _detect_separator(filepath: str) -> str:
+    """Peek at the first line to decide if the file is tab- or comma-separated."""
+    with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+        header = f.readline()
+    if "\t" in header and header.count("\t") > header.count(","):
+        return "\t"
+    return ","
+
+
+def _try_column_sets(df, current, *alternatives):
+    """Return the first column set whose x/y/z columns all exist in *df*."""
+    if current["x"] in df.columns:
+        return current
+    for alt in alternatives:
+        if alt and all(alt[k] in df.columns for k in ("x", "y", "z")):
+            return alt
+    return current
+
+
 def load_imu_csv(
     filepath: str,
     time_col: str = None,
@@ -26,70 +46,91 @@ def load_imu_csv(
     accel_units: str = None,
 ) -> tuple[pd.DataFrame, float]:
     """
-    Load IMU data from CSV. Returns (dataframe with columns aligned to logical names, sample_rate_hz).
-    Assumes timestamp is in seconds or will be converted to elapsed seconds.
-    If CSV has no sample rate info, use config.DEFAULT_SAMPLE_RATE_HZ.
+    Load IMU data from CSV (or tab-separated file).
+    Auto-detects separator, column names, datetime vs numeric timestamps, and units.
+    Returns (dataframe with logical column names, sample_rate_hz).
     """
-    df = pd.read_csv(filepath)
+    sep = _detect_separator(filepath)
+    df = pd.read_csv(filepath, sep=sep)
     if len(df) == 0:
         raise ValueError("CSV file is empty or has no data rows. Please upload a file with at least one row of IMU data.")
+
     time_col = time_col or config.DEFAULT_TIME_COL
     accel_cols = accel_cols or config.DEFAULT_ACCEL_COLS
     gyro_cols = gyro_cols or config.DEFAULT_GYRO_COLS
     accel_units = accel_units or config.ACCEL_UNITS
-    # If default columns missing, try alternative column names (Shimmer, then simple Accel_X / Gyro_X style)
-    if accel_cols["x"] not in df.columns and getattr(config, "SHIMMER_ACCEL_COLS", None):
-        if all(config.SHIMMER_ACCEL_COLS[k] in df.columns for k in ["x", "y", "z"]):
-            accel_cols = config.SHIMMER_ACCEL_COLS
-    if accel_cols["x"] not in df.columns and getattr(config, "SIMPLE_ACCEL_COLS", None):
-        if all(config.SIMPLE_ACCEL_COLS[k] in df.columns for k in ["x", "y", "z"]):
-            accel_cols = config.SIMPLE_ACCEL_COLS
-    if gyro_cols["x"] not in df.columns and getattr(config, "SHIMMER_GYRO_COLS", None):
-        if all(config.SHIMMER_GYRO_COLS[k] in df.columns for k in ["x", "y", "z"]):
-            gyro_cols = config.SHIMMER_GYRO_COLS
-    if gyro_cols["x"] not in df.columns and getattr(config, "SIMPLE_GYRO_COLS", None):
-        if all(config.SIMPLE_GYRO_COLS[k] in df.columns for k in ["x", "y", "z"]):
-            gyro_cols = config.SIMPLE_GYRO_COLS
 
-    # Normalize time to seconds from start
+    device_accel = getattr(config, "DEVICE_ACCEL_COLS", None)
+    device_gyro = getattr(config, "DEVICE_GYRO_COLS", None)
+    device_time = getattr(config, "DEVICE_TIME_COL", None)
+    shimmer_accel = getattr(config, "SHIMMER_ACCEL_COLS", None)
+    shimmer_gyro = getattr(config, "SHIMMER_GYRO_COLS", None)
+    simple_accel = getattr(config, "SIMPLE_ACCEL_COLS", None)
+    simple_gyro = getattr(config, "SIMPLE_GYRO_COLS", None)
+
+    accel_cols = _try_column_sets(df, accel_cols, device_accel, shimmer_accel, simple_accel)
+    gyro_cols = _try_column_sets(df, gyro_cols, device_gyro, shimmer_gyro, simple_gyro)
+
+    # Auto-detect accel units from column names (e.g. "AccX(g)" → g)
+    detected_units = accel_units
+    if device_accel and accel_cols["x"] == device_accel["x"]:
+        detected_units = "g"
+
+    # --- Resolve time column ---
     if time_col not in df.columns:
-        # Try common alternatives
-        for c in ["timestamp", "Timestamp", "Time", "time", "t"]:
-            if c in df.columns:
+        candidates = [device_time, "timestamp", "Timestamp", "Time", "time", "t"]
+        for c in candidates:
+            if c and c in df.columns:
                 time_col = c
                 break
         else:
-            df["Timestamp"] = np.arange(len(df)) / config.DEFAULT_SAMPLE_RATE_HZ
-            time_col = "Timestamp"
-    t = pd.to_numeric(df[time_col], errors="coerce").ffill().bfill()
-    if len(t) == 0 or pd.isna(t.iloc[0]):
-        raise ValueError("CSV has no valid time column or all time values are missing. Need a 'Timestamp' (or time/t) column with numeric values.")
-    if t.iloc[0] > 1e6:  # possibly milliseconds
-        t = t / 1000.0
-    t = t - t.iloc[0]
-    df = df.copy()
-    df["time_s"] = t
+            df["_gen_time"] = np.arange(len(df)) / config.DEFAULT_SAMPLE_RATE_HZ
+            time_col = "_gen_time"
 
-    # Build accel/gyro arrays (Nx3)
-    ax = df[accel_cols["x"]].values if accel_cols["x"] in df.columns else np.zeros(len(df))
-    ay = df[accel_cols["y"]].values if accel_cols["y"] in df.columns else np.zeros(len(df))
-    az = df[accel_cols["z"]].values if accel_cols["z"] in df.columns else np.zeros(len(df))
+    # Parse time: try numeric first; fall back to datetime strings
+    t_raw = df[time_col]
+    t_numeric = pd.to_numeric(t_raw, errors="coerce")
+    if t_numeric.notna().sum() > 0.5 * len(t_numeric):
+        t = t_numeric.ffill().bfill()
+        if t.iloc[0] > 1e6:
+            t = t / 1000.0
+        t = t - t.iloc[0]
+    else:
+        t_dt = pd.to_datetime(t_raw, errors="coerce")
+        if t_dt.notna().sum() < 0.5 * len(t_dt):
+            raise ValueError(
+                f"Could not parse time column '{time_col}'. "
+                "Need either numeric seconds/ms or datetime strings."
+            )
+        t_dt = t_dt.ffill().bfill()
+        t = (t_dt - t_dt.iloc[0]).dt.total_seconds()
+
+    df = df.copy()
+    df["time_s"] = t.values
+
+    # Build accel array (Nx3)
+    ax = pd.to_numeric(df.get(accel_cols["x"]), errors="coerce").fillna(0).values
+    ay = pd.to_numeric(df.get(accel_cols["y"]), errors="coerce").fillna(0).values
+    az = pd.to_numeric(df.get(accel_cols["z"]), errors="coerce").fillna(0).values
     accel = np.column_stack([ax, ay, az])
-    if accel_units == "g":
+    if detected_units == "g":
         accel = accel * 9.81
 
-    gx = df[gyro_cols["x"]].values if gyro_cols["x"] in df.columns else np.zeros(len(df))
-    gy = df[gyro_cols["y"]].values if gyro_cols["y"] in df.columns else np.zeros(len(df))
-    gz = df[gyro_cols["z"]].values if gyro_cols["z"] in df.columns else np.zeros(len(df))
+    # Build gyro array (Nx3)
+    gx = pd.to_numeric(df.get(gyro_cols["x"]), errors="coerce").fillna(0).values
+    gy = pd.to_numeric(df.get(gyro_cols["y"]), errors="coerce").fillna(0).values
+    gz = pd.to_numeric(df.get(gyro_cols["z"]), errors="coerce").fillna(0).values
     gyro = np.column_stack([gx, gy, gz])
-    # If gyro is in deg/s, convert to rad/s
-    if np.abs(gyro).max() < 20 and np.abs(gyro).max() > 0:
+    # Convert deg/s → rad/s when values are clearly in degrees (large magnitudes)
+    gyro_max = np.abs(gyro).max()
+    if gyro_max > 20:
         gyro = np.radians(gyro)
 
-    # Estimate sample rate from timestamps if possible
+    # Estimate sample rate from timestamps
     if len(t) > 1:
-        dt = np.diff(t)
-        sample_rate_hz = 1.0 / np.median(dt[dt > 0])
+        dt = np.diff(t.values if hasattr(t, "values") else t)
+        dt_pos = dt[dt > 0]
+        sample_rate_hz = 1.0 / np.median(dt_pos) if len(dt_pos) else config.DEFAULT_SAMPLE_RATE_HZ
     else:
         sample_rate_hz = config.DEFAULT_SAMPLE_RATE_HZ
 
@@ -100,6 +141,24 @@ def load_imu_csv(
     df["gyro_y"] = gyro[:, 1]
     df["gyro_z"] = gyro[:, 2]
     return df, sample_rate_hz
+
+
+def _resample_to_target(time_s, accel, gyro, native_hz, target_hz):
+    """Resample accel (Nx3) and gyro (Nx3) from native_hz up to target_hz using cubic interpolation."""
+    t_start, t_end = time_s[0], time_s[-1]
+    n_new = int(round((t_end - t_start) * target_hz)) + 1
+    t_new = np.linspace(t_start, t_end, n_new)
+
+    accel_new = np.zeros((n_new, 3))
+    gyro_new = np.zeros((n_new, 3))
+    for ax in range(3):
+        accel_new[:, ax] = interpolate.interp1d(
+            time_s, accel[:, ax], kind="cubic", fill_value="extrapolate"
+        )(t_new)
+        gyro_new[:, ax] = interpolate.interp1d(
+            time_s, gyro[:, ax], kind="cubic", fill_value="extrapolate"
+        )(t_new)
+    return t_new, accel_new, gyro_new
 
 
 def run_pipeline(
@@ -125,6 +184,19 @@ def run_pipeline(
     else:
         if accel is None or gyro is None or time_s is None or sample_rate_hz is None:
             raise ValueError("Provide either filepath or (accel, gyro, time_s, sample_rate_hz)")
+        df_raw = pd.DataFrame({
+            "time_s": time_s,
+            "accel_x": accel[:, 0], "accel_y": accel[:, 1], "accel_z": accel[:, 2],
+            "gyro_x": gyro[:, 0], "gyro_y": gyro[:, 1], "gyro_z": gyro[:, 2],
+        })
+
+    # Resample to target rate if the native rate is too low
+    target_hz = getattr(config, "TARGET_SAMPLE_RATE_HZ", 100.0)
+    if sample_rate_hz < target_hz * 0.9 and len(time_s) >= 4:
+        time_s, accel, gyro = _resample_to_target(
+            time_s, accel, gyro, sample_rate_hz, target_hz
+        )
+        sample_rate_hz = target_hz
         df_raw = pd.DataFrame({
             "time_s": time_s,
             "accel_x": accel[:, 0], "accel_y": accel[:, 1], "accel_z": accel[:, 2],

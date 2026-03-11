@@ -10,9 +10,14 @@ from scipy import signal as scipy_signal
 def lowpass_filter(x: np.ndarray, sample_rate_hz: float, cutoff_hz: float, order: int = 4) -> np.ndarray:
     """
     Butterworth low-pass filter. Attenuates high-frequency noise.
+    If cutoff >= Nyquist, clamps to 0.95 * Nyquist so the filter stays valid.
     """
     nyq = 0.5 * sample_rate_hz
+    if cutoff_hz >= nyq:
+        cutoff_hz = nyq * 0.95
     normal_cutoff = cutoff_hz / nyq
+    if normal_cutoff <= 0 or len(x) < (3 * order + 1):
+        return x.copy()
     b, a = scipy_signal.butter(order, normal_cutoff, btype="low", analog=False)
     return scipy_signal.filtfilt(b, a, x, axis=0)
 

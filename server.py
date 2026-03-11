@@ -107,12 +107,16 @@ def get_session_data(filepath=None, mass_kg=70, duration_sec=90, stroke_rate_spm
         sei_rating_10 = 5.0
         sei_pct = 50.0
 
-    if df["entry_angle_deg"].mean() >= -10 and df["entry_angle_deg"].mean() <= 10:
+    avg_angle = df["entry_angle_deg"].mean()
+    abs_angle = abs(avg_angle)
+    if abs_angle <= 15:
         entry_label = "Good"
-    elif df["entry_angle_deg"].mean() < -10:
-        entry_label = "Bad (injury risk)"
-    else:
+    elif abs_angle <= 30:
+        entry_label = "Caution" if avg_angle > 0 else "Caution (inward)"
+    elif avg_angle > 0:
         entry_label = "Bad (inefficient)"
+    else:
+        entry_label = "Bad (injury risk)"
 
     change_points = []
     if len(df) > 4:
@@ -363,8 +367,9 @@ def data_upload():
             flash("Please select a CSV file to upload.", "error")
             return redirect(url_for("data_upload"))
 
-        if not file.filename.lower().endswith(".csv"):
-            flash("File must be a CSV.", "error")
+        allowed_ext = (".csv", ".txt")
+        if not file.filename.lower().endswith(allowed_ext):
+            flash("File must be a .csv or .txt file.", "error")
             return redirect(url_for("data_upload"))
 
         _ensure_upload_dir()

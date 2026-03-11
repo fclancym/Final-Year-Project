@@ -131,22 +131,35 @@
                 <!-- Hand Entry Angle -->
                 <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <h4 class="text-sm font-bold uppercase tracking-wide">Hand entry angle</h4>
-                    <p class="text-xs text-slate-500 mt-1 mb-3">Angle of the hand when it enters the water. Good angle = less drag and lower injury risk.</p>
-                    <div class="h-40 w-full flex flex-col justify-end gap-2 px-2">
-                        <div class="flex items-end justify-between h-full gap-1">
-                            <div class="w-1/2 flex items-end justify-around h-full border-r border-slate-700/20 pr-2">
-                                <div class="w-4 bg-primary/40 rounded-t h-[60%]"></div><div class="w-4 bg-primary rounded-t h-[75%]"></div><div class="w-4 bg-primary rounded-t h-[68%]"></div>
-                            </div>
-                            <div class="w-1/2 flex items-end justify-around h-full pl-2">
-                                <div class="w-4 bg-rose-500/60 rounded-t h-[85%]"></div><div class="w-4 bg-rose-600 rounded-t h-[92%]"></div><div class="w-4 bg-rose-500 rounded-t h-[88%]"></div>
+                    <p class="text-xs text-slate-500 mt-1 mb-3">0° = flat/neutral entry (ideal). Positive = outward rotation (inefficient). Negative = inward rotation (injury risk). Calibrated from the sensor's resting position.</p>
+                    {% set angle_val = d.get('avg_entry_angle', 0) %}
+                    {% set abs_angle = angle_val if angle_val >= 0 else -angle_val %}
+                    <div class="h-40 w-full flex flex-col justify-between">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-slate-500 mb-2">
+                            <span class="text-rose-500">-30° Injury risk</span>
+                            <span class="text-primary">0° Ideal</span>
+                            <span class="text-amber-500">+30° Inefficient</span>
+                        </div>
+                        <div class="flex-1 flex items-center px-2">
+                            <div class="w-full h-8 relative rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+                                <div class="absolute inset-y-0 left-[20%] right-[20%] bg-primary/10 border-x border-primary/30"></div>
+                                <div class="absolute inset-y-0 left-[35%] right-[35%] bg-primary/20 border-x border-primary/40"></div>
+                                {% set needle_pct = 50 + (angle_val / 60 * 50) %}
+                                {% set needle_clamped = [5, [needle_pct, 95]|min]|max %}
+                                <div class="absolute top-0 bottom-0 w-1 rounded-full {{ 'bg-primary' if abs_angle <= 15 else 'bg-amber-500' if abs_angle <= 30 else 'bg-rose-500' }}" style="left: {{ needle_clamped }}%"></div>
                             </div>
                         </div>
-                        <div class="flex justify-between text-[10px] font-medium text-slate-500">
-                            <span class="text-primary font-bold">Good (&lt;35°)</span>
-                            <span class="text-rose-500 font-bold">Risky (&gt;50°)</span>
+                        <div class="flex justify-between text-[10px] font-medium text-slate-500 mt-2 px-1">
+                            <span class="text-rose-500 font-bold">Inward (&lt; -30°)</span>
+                            <span class="text-emerald-500 font-bold">Good (±15°)</span>
+                            <span class="text-amber-500 font-bold">Outward (&gt; +30°)</span>
                         </div>
                     </div>
-                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-4 leading-relaxed p-2 rounded bg-slate-100/50 dark:bg-slate-800/50"><strong>Your session:</strong> Average {{ d.get('avg_entry_angle', 35) }}° — {{ d.get('entry_label', 'Good') }}. {{ 'Entries got steeper later in the swim (more drag; consider drills).' if d.get('entry_label') != 'Good' else 'Entry angle stayed in a good range.' }}</p>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-4 leading-relaxed p-2 rounded bg-slate-100/50 dark:bg-slate-800/50"><strong>Your session:</strong> Average {{ d.get('avg_entry_angle', 0) }}° — <strong>{{ d.get('entry_label', 'Good') }}</strong>.
+                    {% if abs_angle <= 15 %} Entry angle stayed in a good range close to flat.
+                    {% elif angle_val > 0 %} Hand rotating outward on entry — less efficient catch. Focus on fingertip-first entry.
+                    {% else %} Hand rotating inward on entry — increases shoulder impingement risk. Focus on relaxed, neutral wrist position.
+                    {% endif %}</p>
                 </div>
                 <!-- Power vs Reach -->
                 <div class="bg-white dark:bg-slate-900/40 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">

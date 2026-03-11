@@ -63,16 +63,20 @@ def per_stroke_rates(peak_indices: np.ndarray, sample_rate_hz: float) -> np.ndar
 def hand_entry_angle_at_peaks(
     euler_rad: np.ndarray,
     peak_indices: np.ndarray,
+    calibration_samples: int = 50,
 ) -> np.ndarray:
     """
-    Hand entry angle from pitch/roll at stroke (peak) times.
-    euler_rad: Nx3 [roll, pitch, yaw] in radians.
-    Returns angles in degrees: entry angle per stroke (simplified: use pitch as proxy).
+    Hand entry angle from pitch at stroke (peak) times, calibrated so that
+    the resting orientation reads 0°.  A flat/neutral hand entry ≈ 0°;
+    positive = outward rotation (inefficient); negative = inward rotation
+    (injury risk).
     """
     if len(peak_indices) == 0:
         return np.array([])
-    # Use pitch (euler_rad[:, 1]) as proxy for entry angle; convert to degrees.
-    angles_rad = euler_rad[peak_indices, 1]
+    pitch = euler_rad[:, 1]
+    n_cal = min(calibration_samples, len(pitch))
+    offset = np.mean(pitch[:n_cal])
+    angles_rad = pitch[peak_indices] - offset
     return np.degrees(angles_rad)
 
 
