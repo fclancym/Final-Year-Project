@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Coach Team Overview - SwimCoach Elite Biomechanics</title>
+    <title>Team Overview - Hydro-Logic</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -12,15 +12,15 @@
     </script>
     <style>body { font-family: 'Lexend', sans-serif; } .sparkline-svg { height: 32px; width: 100px; }</style>
 </head>
-<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex overflow-hidden">
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 h-screen flex overflow-hidden">
 {% set d = data or {} %}
 <!-- Sidebar -->
 <aside class="w-64 bg-white dark:bg-background-dark border-r border-slate-200 dark:border-primary/20 flex flex-col h-screen shrink-0">
     <div class="p-6 flex items-center gap-3">
         <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white"><span class="material-symbols-outlined">waves</span></div>
         <div>
-            <h1 class="text-lg font-bold leading-tight">SwimCoach</h1>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Elite Biomechanics</p>
+            <h1 class="text-lg font-bold leading-tight">Hydro-Logic</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Swim Analytics</p>
         </div>
     </div>
     <nav class="flex-1 px-4 py-4 space-y-1">
@@ -40,7 +40,7 @@
     </div>
 </aside>
 <!-- Main -->
-<main class="flex-1 overflow-y-auto bg-slate-50 dark:bg-background-dark/95">
+<main class="flex-1 min-h-0 overflow-y-auto bg-slate-50 dark:bg-background-dark/95">
     <header class="h-16 border-b border-slate-200 dark:border-primary/20 px-8 flex items-center justify-between sticky top-0 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md z-10">
         <div class="flex items-center gap-4">
             <h2 class="text-xl font-bold">Team Performance</h2>

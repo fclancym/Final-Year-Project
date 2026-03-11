@@ -3,50 +3,53 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Performance Session Comparison - SwimPerform AI</title>
+    <title>Comparison - Hydro-Logic</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script id="tailwind-config">
-        tailwind.config = { darkMode: "class", theme: { extend: { colors: { "primary": "#13a4ec", "background-light": "#f6f7f8", "background-dark": "#101c22" }, fontFamily: { "display": ["Lexend", "sans-serif"] }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" } } } }
+        tailwind.config = { darkMode: "class", theme: { extend: { colors: { "primary": "#13a4ec", "background-light": "#f6f7f8", "background-dark": "#101c22" }, fontFamily: { "display": ["Lexend"] }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" } } } }
     </script>
     <style>body { font-family: 'Lexend', sans-serif; } .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(19, 164, 236, 0.3); border-radius: 10px; }</style>
 </head>
-<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 h-screen flex overflow-hidden">
 {% set d = data or {} %}
 {% set a = d.get('session_a') or {} %}
 {% set b = d.get('session_b') or {} %}
-<header class="flex items-center justify-between border-b border-primary/20 bg-background-light dark:bg-background-dark px-6 py-3 sticky top-0 z-50">
-    <div class="flex items-center gap-8">
-        <div class="flex items-center gap-3 text-primary">
-            <span class="material-symbols-outlined text-3xl">waves</span>
-            <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">SwimPerform <span class="text-primary">AI</span></h1>
+<!-- Sidebar -->
+<aside class="w-64 bg-white dark:bg-background-dark border-r border-slate-200 dark:border-primary/20 flex flex-col h-screen shrink-0">
+    <div class="p-6 flex items-center gap-3">
+        <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white"><span class="material-symbols-outlined">waves</span></div>
+        <div>
+            <h1 class="text-lg font-bold leading-tight">Hydro-Logic</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Swim Analytics</p>
         </div>
-        <nav class="hidden md:flex items-center gap-6">
-            <a class="text-sm font-medium hover:text-primary transition-colors" href="/dashboard">Dashboard</a>
-            <a class="text-sm font-bold text-primary border-b-2 border-primary pb-1" href="/comparison">Comparison</a>
-            <a class="text-sm font-medium hover:text-primary transition-colors" href="/deep-dive">Athletes</a>
-            <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Library</a>
-        </nav>
     </div>
-    <div class="flex items-center gap-4">
-        <input class="bg-primary/5 border border-primary/20 rounded-lg pl-9 pr-4 py-1.5 text-sm w-64" placeholder="Search athletes..." type="text"/>
-        <button class="p-2 rounded-lg hover:bg-primary/10 text-slate-400 hover:text-primary"><span class="material-symbols-outlined">notifications</span></button>
-        <div class="h-8 w-8 rounded-full bg-primary/20 border border-primary/40"></div>
-    </div>
-</header>
-<main class="flex-1 flex flex-col p-4 md:p-6 gap-6 max-w-[1600px] mx-auto w-full">
-    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div class="space-y-1">
-            <nav class="flex items-center gap-2 text-xs text-slate-500 font-medium uppercase tracking-wider">
-                <a href="/dashboard">Athletes</a><span class="material-symbols-outlined text-[10px]">chevron_right</span>
-                <a href="/deep-dive">Current Session</a><span class="material-symbols-outlined text-[10px]">chevron_right</span>
-                <span class="text-primary">Session Comparison</span>
-            </nav>
-            <h2 class="text-3xl font-black text-slate-900 dark:text-slate-100 uppercase italic tracking-tighter">Performance Comparison</h2>
+    <nav class="flex-1 px-4 py-4 space-y-1">
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="/dashboard"><span class="material-symbols-outlined">group</span><span class="text-sm font-medium">Team Overview</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="/deep-dive"><span class="material-symbols-outlined">query_stats</span><span class="text-sm font-medium">Individual Analysis</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary transition-colors" href="/comparison"><span class="material-symbols-outlined">compare_arrows</span><span class="text-sm font-medium">Comparison</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="/data-upload"><span class="material-symbols-outlined">cloud_upload</span><span class="text-sm font-medium">Data Upload</span></a>
+        <div class="pt-4 pb-2"><p class="px-3 text-[10px] uppercase tracking-wider text-slate-400 font-bold">Reporting</p></div>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="#"><span class="material-symbols-outlined">description</span><span class="text-sm font-medium">Training Logs</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="#"><span class="material-symbols-outlined">settings</span><span class="text-sm font-medium">Configuration</span></a>
+    </nav>
+    <div class="p-4 border-t border-slate-200 dark:border-primary/20">
+        <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-primary/5 cursor-pointer">
+            <div class="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/40"></div>
+            <div class="overflow-hidden"><p class="text-sm font-semibold truncate">Coach</p><p class="text-xs text-slate-500 truncate">Lead</p></div>
         </div>
-        <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-lg shadow-primary/20"><span class="material-symbols-outlined text-sm">ios_share</span>Export Report</button>
     </div>
+</aside>
+<!-- Main -->
+<main class="flex-1 min-h-0 overflow-y-auto bg-slate-50 dark:bg-background-dark/95">
+    <header class="h-16 border-b border-slate-200 dark:border-primary/20 px-8 flex items-center justify-between sticky top-0 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md z-10">
+        <div class="flex items-center gap-4">
+            <h2 class="text-xl font-bold">Performance Comparison</h2>
+        </div>
+        <button class="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primary/90 shadow-lg shadow-primary/20"><span class="material-symbols-outlined text-sm">ios_share</span>Export Report</button>
+    </header>
+    <div class="p-8 space-y-6">
     <!-- Choose who to compare -->
     <div class="bg-white dark:bg-slate-900/50 rounded-xl border border-primary/20 p-4">
         <p class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Compare two sessions</p>
@@ -147,7 +150,7 @@
                 <div class="mt-auto">
                     <div class="p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5">
                         <h4 class="text-[10px] font-bold text-primary uppercase mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-xs">lightbulb</span> Coach Cue</h4>
-                        <p class="text-[11px] leading-relaxed text-slate-300">"{{ 'Athlete is dropping the elbow as fatigue sets in. Focus on high-elbow recovery even in final sets.' if (d.get('delta_angle', 0) > 2 or (d.get('delta_reach_cm', 0) < -5) else 'Session consistency is good. Maintain form in later halves.' }}"</p>
+                        <p class="text-[11px] leading-relaxed text-slate-300">"{{ 'Athlete is dropping the elbow as fatigue sets in. Focus on high-elbow recovery even in final sets.' if (d.get('delta_angle', 0) > 2 or d.get('delta_reach_cm', 0) < -5) else 'Session consistency is good. Maintain form in later halves.' }}"</p>
                     </div>
                 </div>
                 <button class="w-full py-2 rounded-lg bg-background-dark dark:bg-slate-100 text-white dark:text-background-dark font-black text-[10px] uppercase tracking-widest">Apply Fix Routine</button>
@@ -239,11 +242,11 @@
             </div>
             <div class="space-y-4">
                 <h5 class="text-sm font-black uppercase italic text-slate-500">Biomechanical Summary - Session B (Second half)</h5>
-                <p class="text-xs leading-relaxed text-slate-400">{% if (d.get('delta_reach_cm', 0) < 0 or (d.get('delta_power_pct', 0) < 0) %}Degradation noted in second half. Reach shortened by {{ (-d.get('delta_reach_cm', 0))|abs }} cm. Entry angle shifted {{ d.get('delta_angle', 6) }}°. Power change {{ d.get('delta_power_pct', -13.2) }}%.{% else %}Consistent form maintained. Entry angle {{ b.get('entry_angle', 38) }}°, power {{ b.get('avg_power', 295) }} W.{% endif %}</p>
+                <p class="text-xs leading-relaxed text-slate-400">{% if d.get('delta_reach_cm', 0) < 0 or d.get('delta_power_pct', 0) < 0 %}Degradation noted in second half. Reach shortened by {{ (0 - d.get('delta_reach_cm', 0))|abs }} cm. Entry angle shifted {{ d.get('delta_angle', 6) }}°. Power change {{ d.get('delta_power_pct', -13.2) }}%.{% else %}Consistent form maintained. Entry angle {{ b.get('entry_angle', 38) }}°, power {{ b.get('avg_power', 295) }} W.{% endif %}</p>
             </div>
         </div>
     </div>
+    </div>
 </main>
-<footer class="mt-auto border-t border-primary/10 py-6 text-center text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">SwimPerform AI • Proprietary ML Algorithm v4.2.0 • Data Sync Status: <span class="text-primary">Live</span></footer>
 </body>
 </html>

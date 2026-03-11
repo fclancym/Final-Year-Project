@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Swimmer Biomechanical Deep-Dive - Hydro-Logic</title>
+    <title>Individual Analysis - Hydro-Logic</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -12,31 +12,35 @@
     </script>
     <style>body { font-family: 'Lexend', sans-serif; } .chart-container { background: linear-gradient(180deg, rgba(19, 164, 236, 0.05) 0%, rgba(16, 28, 34, 0) 100%); }</style>
 </head>
-<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden">
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 h-screen flex overflow-hidden">
 {% set d = data or {} %}
-<div class="flex h-full w-full">
-    <!-- Sidebar -->
-    <aside class="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark flex flex-col justify-between p-4 shrink-0">
-        <div class="flex flex-col gap-8">
-            <div class="flex items-center gap-3 px-2">
-                <div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white"><span class="material-symbols-outlined">waves</span></div>
-                <div><h1 class="font-bold text-sm tracking-tight leading-none uppercase">Hydro-Logic</h1><p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">BIOMECHANICAL LAB</p></div>
-            </div>
-            <nav class="flex flex-col gap-2">
-                <a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-primary/10 hover:text-primary rounded-lg transition-all" href="/dashboard"><span class="material-symbols-outlined">grid_view</span><span class="text-sm font-medium">Dashboard</span></a>
-                <a class="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary border-r-2 border-primary rounded-lg" href="/deep-dive"><span class="material-symbols-outlined">groups</span><span class="text-sm font-medium">Athlete Roster</span></a>
-                <a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-primary/10 hover:text-primary rounded-lg transition-all" href="/comparison"><span class="material-symbols-outlined">history</span><span class="text-sm font-medium">Session History</span></a>
-                <a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-primary/10 hover:text-primary rounded-lg transition-all" href="#"><span class="material-symbols-outlined">analytics</span><span class="text-sm font-medium">Reports</span></a>
-                <a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-primary/10 hover:text-primary rounded-lg transition-all" href="#"><span class="material-symbols-outlined">settings</span><span class="text-sm font-medium">Lab Settings</span></a>
-            </nav>
+<!-- Sidebar -->
+<aside class="w-64 bg-white dark:bg-background-dark border-r border-slate-200 dark:border-primary/20 flex flex-col h-screen shrink-0">
+    <div class="p-6 flex items-center gap-3">
+        <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white"><span class="material-symbols-outlined">waves</span></div>
+        <div>
+            <h1 class="text-lg font-bold leading-tight">Hydro-Logic</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Swim Analytics</p>
         </div>
-        <div class="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-xl flex items-center gap-3">
-            <div class="h-10 w-10 rounded-full bg-primary/20 border-2 border-primary"></div>
-            <div class="overflow-hidden"><p class="text-xs font-bold truncate">Coach</p><p class="text-[10px] text-slate-500">Elite Performance Dir.</p></div>
+    </div>
+    <nav class="flex-1 px-4 py-4 space-y-1">
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="/dashboard"><span class="material-symbols-outlined">group</span><span class="text-sm font-medium">Team Overview</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary transition-colors" href="/deep-dive"><span class="material-symbols-outlined">query_stats</span><span class="text-sm font-medium">Individual Analysis</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="/comparison"><span class="material-symbols-outlined">compare_arrows</span><span class="text-sm font-medium">Comparison</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="/data-upload"><span class="material-symbols-outlined">cloud_upload</span><span class="text-sm font-medium">Data Upload</span></a>
+        <div class="pt-4 pb-2"><p class="px-3 text-[10px] uppercase tracking-wider text-slate-400 font-bold">Reporting</p></div>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="#"><span class="material-symbols-outlined">description</span><span class="text-sm font-medium">Training Logs</span></a>
+        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5 transition-colors" href="#"><span class="material-symbols-outlined">settings</span><span class="text-sm font-medium">Configuration</span></a>
+    </nav>
+    <div class="p-4 border-t border-slate-200 dark:border-primary/20">
+        <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-primary/5 cursor-pointer">
+            <div class="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/40"></div>
+            <div class="overflow-hidden"><p class="text-sm font-semibold truncate">Coach</p><p class="text-xs text-slate-500 truncate">Lead</p></div>
         </div>
-    </aside>
-    <!-- Main -->
-    <main class="flex-1 flex flex-col overflow-y-auto">
+    </div>
+</aside>
+<!-- Main -->
+<main class="flex-1 min-h-0 overflow-y-auto bg-slate-50 dark:bg-background-dark/95">
         <header class="p-6 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-background-dark/50 backdrop-blur-md sticky top-0 z-10">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
@@ -207,6 +211,5 @@
             </div>
         </div>
     </main>
-</div>
 </body>
 </html>
